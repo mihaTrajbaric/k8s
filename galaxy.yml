@@ -6,6 +6,8 @@ version: 0.1.0
 readme: README.md
 authors:
   - Mihael Trajbarič (github.com/mihaTrajbaric)
+dependencies:
+  - cloud.common
 description: null
 license_file: LICENSE
 tags:

@@ -69,16 +69,84 @@ my_useful_info:
 '''
 
 import copy
+import re
 
 from ansible_collections.sodalite.k8s.plugins.module_utils.ansiblemodule import AnsibleModule
-from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (COMMON_ARG_SPEC)
+from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (COMMON_ARG_SPEC, METADATA_ARG_SPEC)
+from ansible_collections.sodalite.k8s.plugins.module_utils.common import Base64
 
 
 def argspec():
     argument_spec = copy.deepcopy(COMMON_ARG_SPEC)
+    argument_spec.update(copy.deepcopy(METADATA_ARG_SPEC))
     argument_spec['data'] = dict(type='dict')
+    argument_spec['binary_data'] = dict(type='dict')
+    argument_spec['immutable'] = dict(type='bool', default=False)
 
     return argument_spec
+
+
+def definition(params: dict) -> dict:
+
+    data = params.get('data')
+    binary_data = params.get('binary_data')
+    metadata = params.get('metadata')
+
+    body = {
+        "apiVersion": "v1",
+        "kind": "ConfigMap",
+        "metadata": {
+            "name": params.get('name')
+        },
+        "immutable": params.get('immutable')
+    }
+    if binary_data:
+        body['binaryData'] = binary_data
+    if data:
+        body['data'] = data
+    if metadata:
+        body['metadata'].update(metadata)
+
+    return body
+
+
+def validate(module: AnsibleModule, k8s_definition: dict):
+
+    def validate_key(value: str) -> bool:
+        """
+        validates that value consist only of alphanumeric characters, '-', '_' or '.'.
+        """
+        regex = re.compile(r'^[a-zA-Z0-9_.-]+$')
+        return bool(regex.match(str(value)))
+
+    def validate_string_string_dict(_dict: dict) -> bool:
+        """
+        Ensures all values are strings
+        """
+        return all([isinstance(value, str) and isinstance(key, str) for key, value in _dict.items()])
+
+    data = k8s_definition.get('data', {})
+    binary_data = k8s_definition.get('binaryData', {})
+    annotations = k8s_definition['metadata'].get('annotations', {})
+    labels = k8s_definition['metadata'].get('labels', {})
+
+    data_keys_valid = all([validate_key(key) for key in data.keys()])
+    binary_data_keys_valid = all([validate_key(key) for key in binary_data.keys()])
+    keys_unique = len(set(list(data.keys()) + list(binary_data.keys()))) == len(data.keys()) + len(binary_data.keys())
+    binary_data_values_valid = all([Base64.validate(value) for value in binary_data.values()])
+
+    if not data_keys_valid:
+        module.fail_json(msg="Keys in data must consist of alphanumeric characters, '-', '_' or '.'")
+    if not binary_data_keys_valid:
+        module.fail_json(msg="Keys in binary_data must consist of alphanumeric characters, '-', '_' or '.'")
+    if not keys_unique:
+        module.fail_json(msg="Keys in data and binary_data should not overlap")
+    if not binary_data_values_valid:
+        module.fail_json(msg="Values in binary_data should be in Base64 format")
+    if not validate_string_string_dict(annotations):
+        module.fail_json(msg="Metadata.annotations should be map[string]string")
+    if not validate_string_string_dict(labels):
+        module.fail_json(msg="Metadata.labels should be map[string]string")
 
 
 def main():
@@ -86,18 +154,11 @@ def main():
         ('force', 'apply')
     ]
     module = AnsibleModule(argument_spec=argspec(), mutually_exclusive=mutually_exclusive, supports_check_mode=True)
-    from ansible_collections.sodalite.k8s.plugins.module_utils.common import (
-        K8s)
-    # TODO add additional options
-    body = {
-        "apiVersion": "v1",
-        "kind": "ConfigMap",
-        "metadata": {
-            "name": module.params.get('name')
-        },
-        "data": module.params.get('data')
-    }
-    k8s = K8s(module, body)
+    from ansible_collections.sodalite.k8s.plugins.module_utils.common import K8s
+
+    configmap_def = definition(module.params)
+    validate(module, configmap_def)
+    k8s = K8s(module, configmap_def)
     k8s.execute_module()
 
 

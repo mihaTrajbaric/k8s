@@ -23,7 +23,7 @@ def get_api_client(module: AnsibleModule):
 
 class Base64:
 
-    # TODO can also be done with ansible
+    # TODO can it also be done with ansible?
 
     @staticmethod
     def encode(message: str) -> str:
@@ -33,10 +33,27 @@ class Base64:
     def decode(message: str) -> str:
         return base64.b64decode(message.encode('ascii')).decode('ascii')
 
+    @staticmethod
+    def validate(message: str) -> bool:
+        try:
+            return Base64.encode(Base64.decode(message)) == message
+        except Exception:
+            return False
+
+
+class Result:
+    api_version = None
+    kind = None
+    spec = None
+    status = None
+    error = None
+    metadata = None
+    # duration = None
+
 
 class K8s:
 
-    def __init__(self, module: AnsibleModule, body: dict):
+    def __init__(self, module: AnsibleModule, definition: dict):
         self.client = None
         self.module = module
         self.check_mode = self.module.check_mode
@@ -50,13 +67,40 @@ class K8s:
         self.namespace = self.module.params.get('namespace')
         self.force = self.module.params.get('force')
         self.apply = self.module.params.get('apply')
-        self.body = body
-        self.api_version = body.get('apiVersion')
-        self.kind = body.get('kind')
+        self.definition = definition
+        self.api_version = self.definition.get('apiVersion')
+        self.kind = self.definition.get('kind')
+        self.metadata = self.definition.get('metadata')
+
+        self.resource = None
+
+    def result(self, status, error=None) -> Result:
+        res = Result()
+        res.kind = self.kind
+        res.api_version = self.api_version
+        res.spec = self.definition
+        res.metadata = self.metadata
+        res.status = status
+        res.error = error
+        return res
+
+    def find_resource(self, fail=False):
+        for attribute in ['kind', 'name', 'singular_name']:
+            try:
+                return self.client.resources.get(**{'api_version': self.api_version, attribute: self.kind})
+            except (ResourceNotFoundError, ResourceNotUniqueError):
+                pass
+        try:
+            return self.client.resources.get(api_version=self.api_version, kind=self.kind)
+        except (ResourceNotFoundError, ResourceNotUniqueError):
+            if fail:
+                self.fail_json(msg='Failed to find exact match for {0}.{1} by [kind, name, singularName, shortNames]'.format(
+                    self.api_version, self.kind))
 
     def execute_module(self):
         changed = False
         result = None
+        existing = None
 
         try:
             self.client = get_api_client(self.module)
@@ -64,14 +108,70 @@ class K8s:
         except urllib3.exceptions.RequestError as e:
             self.fail_json(msg="Couldn't connect to Kubernetes: %s" % str(e))
 
-        # TODO some error handling
-        # TODO check_mode
-        # TODO return values
+        self.resource = self.find_resource(fail=True)
 
-        if self.state == 'present':
-            result, changed = self.present()
+        try:
+            existing = self.resource.get(name=self.name, namespace=self.namespace)
+        except NotFoundError:
+            pass
+        except (DynamicApiError, ForbiddenError) as e:
+            self.fail_json(msg='Failed to retrieve requested object: {0}'.format(e.body), error=e.status, status=e.status, reason=e.reason)
+
+        if self.state == 'absent':
+            if not existing:
+                pass
+            else:
+                changed = True
+                if not self.check_mode:
+                    try:
+                        self.resource.delete(name=self.name, namespace=self.namespace)
+                    except DynamicApiError as e:
+                        self.fail_json(msg="Failed to delete object: {0}".format(e.body), error=e.status,
+                                       status=e.status, reason=e.reason)
         else:
-            result, changed = self.absent()
+            # state present
+            if not existing:
+                changed = True
+                if not self.check_mode:
+                    try:
+                        result = self.resource.create(body=self.definition, namespace=self.namespace).to_dict()
+                    except DynamicApiError as e:
+                        self.fail_json(msg="Failed to create object: {0}".format(e.body), error=e.status,
+                                       status=e.status, reason=e.reason)
+                else:
+                    result = self.definition
+            else:
+                if self.force:
+                    changed = True
+                    if not self.check_mode:
+                        try:
+                            result = self.resource.replace(
+                                name=self.name, namespace=self.namespace, body=self.definition
+                            ).to_dict()
+                        except DynamicApiError as e:
+                            self.fail_json(msg="Failed to replace object: {0}".format(e.body), error=e.status,
+                                           status=e.status, reason=e.reason)
+                    else:
+                        result = self.definition
+                elif self.apply:
+                    if not self.object_diff(existing.to_dict(), self.definition):
+                        result = existing.to_dict()
+                    else:
+                        changed = True
+                        if not self.check_mode:
+                            try:
+                                result = self.resource.patch(
+                                    name=self.name, namespace=self.namespace, body=self.definition
+                                ).to_dict()
+                            except DynamicApiError as e:
+                                self.fail_json(msg="Failed to patch object: {0}".format(e.body), error=e.status,
+                                               status=e.status, reason=e.reason)
+                        else:
+                            # TODO return how patched object would look like
+                            pass
+                else:
+                    result = existing.to_dict()
+        # TODO wait
 
         self.exit_json(**{
             'changed': changed,
@@ -91,39 +191,3 @@ class K8s:
             else:
                 different = different or (value_new != value_old)
         return different
-
-    def present(self):
-        api = self.client.resources.get(api_version=self.api_version, kind=self.kind)
-
-        try:
-            body_new = api.create(body=self.body, namespace=self.namespace)
-            return body_new.to_dict(), True
-        except ConflictError as e:
-
-            if self.force:
-                body_forced = api.replace(
-                    name=self.name, namespace=self.namespace, body=self.body
-                )
-                return body_forced.to_dict(), True
-
-            if self.apply:
-
-                body_old = api.get(name=self.name, namespace=self.namespace)
-                if not self.object_diff(body_old.to_dict(), self.body):
-                    return body_old.to_dict(), False
-
-                # replace or patch?
-                body_applied = api.replace(
-                    name=self.name, namespace=self.namespace, body=self.body
-                )
-                return body_applied.to_dict(), True
-
-            return None, False
-
-    def absent(self):
-        api = self.client.resources.get(api_version=self.api_version, kind=self.kind)
-        try:
-            response = api.delete(name=self.name, namespace=self.namespace)
-            return response.to_dict(), True
-        except NotFoundError:
-            return None, False

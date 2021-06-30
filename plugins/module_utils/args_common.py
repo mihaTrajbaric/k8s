@@ -22,3 +22,13 @@ COMMON_ARG_SPEC = {
         'default': False,
     },
 }
+METADATA_ARG_SPEC = dict(
+    metadata=dict(
+        type='dict',
+        default=None,
+        options=dict(
+            labels=dict(type='dict'),
+            annotations=dict(type='dict')
+        )
+    )
+)
