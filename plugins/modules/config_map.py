@@ -14,58 +14,113 @@ short_description: Creates k8s ConfigMap
 
 version_added: "1.0.0"
 
-description: Creates k8s ConfigMap which can be used to configure deployments, StatefullSets etc.
+description: Creates k8s ConfigMap which holds configuration data for pods to consume.
+
+extends_documentation_fragment:
+    - sodalite.k8s.common_options
+    - sodalite.k8s.metadata_options
 
 options:
-    name:
-        description: Name fo ConfigMap.
-        required: true
-        type: str
-    state:
-        description:
-          - The ConfigMap state
-        default: present
-        choices: [ "present", "absent"]
-        type: str
     data:
         description:
-            - Dictionary of key,value pairs.
+            - Contains the configuration data.
+            - Each key must consist of alphanumeric characters, '-', '_' or '.'.
+            - Values with non-UTF-8 byte sequences must use the C(binary_data) field.
+            - The keys stored in C(data) must not overlap with the keys in the C(binary_data) field, this is enforced during validation process.
         type: dict
-
-        
+    binary_data:
+        description:
+           - Contains the binary data.
+           - Each key must consist of alphanumeric characters, '-', '_' or '.'.
+           - Can contain byte sequences that are not in the UTF-8 range.
+           - The keys stored in C(binary_data) must not overlap with the ones in the C(data) field, this is enforced during validation process.
+        type: dict
+    immutable:
+        description:
+            - If set to C(true), ensures that data stored in the ConfigMap cannot be updated (only object metadata can be modified).
+            - If set to C(false), the field can be modified at any time.
+        type: bool
+        default: false
 
 author:
     - Mihael Trajbarič (@mihaTrajbaric)
 '''
-# TODO fix
+
 EXAMPLES = r'''
-# Pass in a message
-- name: Test with a message
-  my_namespace.my_collection.my_test_info:
-    name: hello world
+# Create new configmap
+- name: Config for xOpera rest api
+  sodalite.k8s.config_map:
+    name: xOpera-config
+    data:
+      db_ip: postgres-service
+# Replace config
+- name: Config for xOpera rest api
+  sodalite.k8s.config_map:
+    name: xOpera-config
+    state: present
+    force: yes
+    data:
+      db_ip: mysql-service
+# Create config with binary data
+- name: Binary config
+  sodalite.k8s.config_map:
+    name: binary-config
+    binary_data:
+      db_ip: cG9zdGdyZXMtc2VydmljZQ==
+# Create config with metadata
+- name: Metadata
+  sodalite.k8s.config_map:
+    name: xOpera-config
+    metadata:
+      labels:
+        app: postgres
+      annotations:
+        type: my_config
+    data:
+      db_ip: postgres-service
+# Remove config
+- name: Config for xOpera rest api
+  sodalite.k8s.config_map:
+    name: xOpera-config
+    state: absent
+    data:
+      db_ip: postgres-service
 '''
 
 # TODO fix
 RETURN = r'''
-# These are examples of possible return values, and in general should use other names for return values.
-original_message:
-    description: The original name param that was passed in.
-    type: str
-    returned: always
-    sample: 'hello world'
-message:
-    description: The output message that the test module generates.
-    type: str
-    returned: always
-    sample: 'goodbye'
-my_useful_info:
-    description: The dictionary containing information about your system.
-    type: dict
-    returned: always
-    sample: {
-        'foo': 'bar',
-        'answer': 42,
-    }
+result:
+    description:
+    - The created, or otherwise present object. Will be empty in the case of a deletion.
+    returned: success
+    type: complex
+    contains:
+        apiVersion:
+            description: Api version used for creating ConfigMap
+            type: str
+            returned: always
+            sample: 'v1'
+        kind:
+            description: ConfigMap
+            type: str
+            returned: always
+            sample: 'ConfigMap'
+        metadata:
+            description: Standard object's metadata.
+            type: dict
+            returned: always
+        binaryData:
+            description: Binary data in ConfigMap
+            type: str
+            returned: when I(binary_data) is present
+        data:
+            description: Data in ConfigMap
+            type: str
+            returned: when I(data) is present
+        immutable:
+            description: Whether ConfigMap is immutable
+            type: bool
+            returned: when I(immutable) is present
 '''
 
 import copy
@@ -86,7 +141,7 @@ def argspec():
     return argument_spec
 
 
-def definition(params: dict) -> dict:
+def definition(params):
 
     data = params.get('data')
     binary_data = params.get('binary_data')
@@ -110,16 +165,16 @@ def definition(params: dict) -> dict:
     return body
 
 
-def validate(module: AnsibleModule, k8s_definition: dict):
+def validate(module, k8s_definition):
 
-    def validate_key(value: str) -> bool:
+    def validate_key(value):
         """
         validates that value consist only of alphanumeric characters, '-', '_' or '.'.
         """
         regex = re.compile(r'^[a-zA-Z0-9_.-]+$')
         return bool(regex.match(str(value)))
 
-    def validate_string_string_dict(_dict: dict) -> bool:
+    def validate_string_string_dict(_dict):
         """
         Ensures all values are strings
         """
@@ -150,10 +205,7 @@ def validate(module: AnsibleModule, k8s_definition: dict):
 
 
 def main():
-    mutually_exclusive = [
-        ('force', 'apply')
-    ]
-    module = AnsibleModule(argument_spec=argspec(), mutually_exclusive=mutually_exclusive, supports_check_mode=True)
+    module = AnsibleModule(argument_spec=argspec(), supports_check_mode=True)
     from ansible_collections.sodalite.k8s.plugins.module_utils.common import K8s
 
     configmap_def = definition(module.params)

@@ -1,40 +1,55 @@
 from __future__ import absolute_import, division, print_function
-from kubernetes import config, dynamic
-from kubernetes.client import api_client, exceptions
-from kubernetes.dynamic.exceptions import (
+__metaclass__ = type
+
+import base64
+
+K8S_IMP_ERR = None
+try:
+    from kubernetes import config, dynamic
+    from kubernetes.client import api_client, exceptions
+    from kubernetes.dynamic.exceptions import (
         NotFoundError, ResourceNotFoundError, ResourceNotUniqueError, DynamicApiError,
         ConflictError, ForbiddenError, MethodNotAllowedError, BadRequestError,
         KubernetesValidateMissing
     )
-import base64
-import urllib3
-from ansible.module_utils.basic import AnsibleModule
+    HAS_K8S_MODULE_HELPER = True
+    k8s_import_exception = None
+except ImportError as e:
+    HAS_K8S_MODULE_HELPER = False
+    k8s_import_exception = e
+
+try:
+    import urllib3
+    urllib3.disable_warnings()
+except ImportError:
+    pass
 
 
 # TODO Import checking
 # TODO configuration
 
-def get_api_client(module: AnsibleModule):
+def get_api_client(module):
     # TODO expand api client options
     dyn_client = dynamic.DynamicClient(
         api_client.ApiClient(configuration=config.load_kube_config())
     )
     return dyn_client
 
+
 class Base64:
 
     # TODO can it also be done with ansible?
 
     @staticmethod
-    def encode(message: str) -> str:
+    def encode(message):
         return base64.b64encode(message.encode('ascii')).decode('ascii')
 
     @staticmethod
-    def decode(message: str) -> str:
+    def decode(message):
         return base64.b64decode(message.encode('ascii')).decode('ascii')
 
     @staticmethod
-    def validate(message: str) -> bool:
+    def validate(message):
         try:
             return Base64.encode(Base64.decode(message)) == message
         except Exception:
@@ -53,7 +68,7 @@ class Result:
 
 class K8s:
 
-    def __init__(self, module: AnsibleModule, definition: dict):
+    def __init__(self, module, definition):
         self.client = None
         self.module = module
         self.check_mode = self.module.check_mode
@@ -66,23 +81,12 @@ class K8s:
         self.name = self.module.params.get('name')
         self.namespace = self.module.params.get('namespace')
         self.force = self.module.params.get('force')
-        self.apply = self.module.params.get('apply')
         self.definition = definition
         self.api_version = self.definition.get('apiVersion')
         self.kind = self.definition.get('kind')
         self.metadata = self.definition.get('metadata')
 
         self.resource = None
-
-    def result(self, status, error=None) -> Result:
-        res = Result()
-        res.kind = self.kind
-        res.api_version = self.api_version
-        res.spec = self.definition
-        res.metadata = self.metadata
-        res.status = status
-        res.error = error
-        return res
 
     def find_resource(self, fail=False):
         for attribute in ['kind', 'name', 'singular_name']:
@@ -153,7 +157,7 @@ class K8s:
                                            status=e.status, reason=e.reason)
                     else:
                         result = self.definition
-                elif self.apply:
+                else:
                     if not self.object_diff(existing.to_dict(), self.definition):
                         result = existing.to_dict()
                     else:
@@ -169,8 +173,6 @@ class K8s:
                         else:
                             # TODO return how patched object would look like
                             pass
-                else:
-                    result = existing.to_dict()
         # TODO wait
 
         self.exit_json(**{
@@ -179,7 +181,7 @@ class K8s:
         })
 
     # check if old has any new keys
-    def object_diff(self, old_object: dict, new_object: dict):
+    def object_diff(self, old_object, new_object):
         different = False
         for key, value_new in new_object.items():
             try:
