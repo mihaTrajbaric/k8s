@@ -19,6 +19,9 @@ description: Creates k8s ConfigMap which holds configuration data for pods to co
 extends_documentation_fragment:
     - sodalite.k8s.common_options
     - sodalite.k8s.metadata_options
+    - kubernetes.core.k8s_auth_options
+    - kubernetes.core.k8s_wait_options
+    - kubernetes.core.k8s_delete_options
 
 options:
     data:
@@ -26,18 +29,21 @@ options:
             - Contains the configuration data.
             - Each key must consist of alphanumeric characters, '-', '_' or '.'.
             - Values with non-UTF-8 byte sequences must use the C(binary_data) field.
-            - The keys stored in C(data) must not overlap with the keys in the C(binary_data) field, this is enforced during validation process.
+            - The keys stored in C(data) must not overlap with the keys in the C(binary_data) field, this is enforced
+              during validation process.
         type: dict
     binary_data:
         description:
            - Contains the binary data.
            - Each key must consist of alphanumeric characters, '-', '_' or '.'.
            - Can contain byte sequences that are not in the UTF-8 range.
-           - The keys stored in C(binary_data) must not overlap with the ones in the C(data) field, this is enforced during validation process.
+           - The keys stored in C(binary_data) must not overlap with the ones in the C(data) field, this is enforced
+             during validation process.
         type: dict
     immutable:
         description:
-            - If set to C(true), ensures that data stored in the ConfigMap cannot be updated (only object metadata can be modified).
+            - If set to C(true), ensures that data stored in the ConfigMap cannot be updated (only object metadata
+              can be modified).
             - If set to C(false), the field can be modified at any time.
         type: bool
         default: false
@@ -45,7 +51,7 @@ options:
 author:
     - Mihael Trajbarič (@mihaTrajbaric)
 '''
-
+# TODO fix
 EXAMPLES = r'''
 # Create new configmap
 - name: Config for xOpera rest api
@@ -124,21 +130,10 @@ result:
 '''
 
 import copy
-import re
 
-from ansible_collections.sodalite.k8s.plugins.module_utils.ansiblemodule import AnsibleModule
-from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (COMMON_ARG_SPEC, METADATA_ARG_SPEC)
-from ansible_collections.sodalite.k8s.plugins.module_utils.common import Base64
-
-
-def argspec():
-    argument_spec = copy.deepcopy(COMMON_ARG_SPEC)
-    argument_spec.update(copy.deepcopy(METADATA_ARG_SPEC))
-    argument_spec['data'] = dict(type='dict')
-    argument_spec['binary_data'] = dict(type='dict')
-    argument_spec['immutable'] = dict(type='bool', default=False)
-
-    return argument_spec
+from ansible_collections.kubernetes.core.plugins.module_utils.ansiblemodule import AnsibleModule
+from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (common_arg_spec, METADATA_ARG_SPEC, COMMON_MUTALLY_EXCLUSIVE)
+from ansible_collections.sodalite.k8s.plugins.module_utils.common import Base64, Validators
 
 
 def definition(params):
@@ -167,26 +162,13 @@ def definition(params):
 
 def validate(module, k8s_definition):
 
-    def validate_key(value):
-        """
-        validates that value consist only of alphanumeric characters, '-', '_' or '.'.
-        """
-        regex = re.compile(r'^[a-zA-Z0-9_.-]+$')
-        return bool(regex.match(str(value)))
+    data = k8s_definition.get('data', dict())
+    binary_data = k8s_definition.get('binaryData', dict())
+    annotations = k8s_definition['metadata'].get('annotations', dict())
+    labels = k8s_definition['metadata'].get('labels', dict())
 
-    def validate_string_string_dict(_dict):
-        """
-        Ensures all values are strings
-        """
-        return all([isinstance(value, str) and isinstance(key, str) for key, value in _dict.items()])
-
-    data = k8s_definition.get('data', {})
-    binary_data = k8s_definition.get('binaryData', {})
-    annotations = k8s_definition['metadata'].get('annotations', {})
-    labels = k8s_definition['metadata'].get('labels', {})
-
-    data_keys_valid = all([validate_key(key) for key in data.keys()])
-    binary_data_keys_valid = all([validate_key(key) for key in binary_data.keys()])
+    data_keys_valid = all([Validators.alphanumeric(key) for key in data.keys()])
+    binary_data_keys_valid = all([Validators.alphanumeric(key) for key in binary_data.keys()])
     keys_unique = len(set(list(data.keys()) + list(binary_data.keys()))) == len(data.keys()) + len(binary_data.keys())
     binary_data_values_valid = all([Base64.validate(value) for value in binary_data.values()])
 
@@ -198,20 +180,31 @@ def validate(module, k8s_definition):
         module.fail_json(msg="Keys in data and binary_data should not overlap")
     if not binary_data_values_valid:
         module.fail_json(msg="Values in binary_data should be in Base64 format")
-    if not validate_string_string_dict(annotations):
+    if not Validators.string_string_dict(annotations):
         module.fail_json(msg="Metadata.annotations should be map[string]string")
-    if not validate_string_string_dict(labels):
+    if not Validators.string_string_dict(labels):
         module.fail_json(msg="Metadata.labels should be map[string]string")
 
 
 def main():
-    module = AnsibleModule(argument_spec=argspec(), supports_check_mode=True)
-    from ansible_collections.sodalite.k8s.plugins.module_utils.common import K8s
+    argspec = common_arg_spec()
+    argspec.update(copy.deepcopy(METADATA_ARG_SPEC))
+    argspec.update(dict(
+        data=dict(type='dict'),
+        binary_data=dict(type='dict'),
+        immutable=dict(type='bool', default=False)
+    ))
+
+    module = AnsibleModule(argument_spec=argspec, mutually_exclusive=COMMON_MUTALLY_EXCLUSIVE, supports_check_mode=True)
+    from ansible_collections.kubernetes.core.plugins.module_utils.common import (K8sAnsibleMixin, get_api_client)
+    from ansible_collections.sodalite.k8s.plugins.module_utils.common import (execute_module)
 
     configmap_def = definition(module.params)
     validate(module, configmap_def)
-    k8s = K8s(module, configmap_def)
-    k8s.execute_module()
+
+    k8s_ansible_mixin = K8sAnsibleMixin(module)
+    k8s_ansible_mixin.client = get_api_client(module=module)
+    execute_module(module, k8s_ansible_mixin, configmap_def)
 
 
 if __name__ == '__main__':

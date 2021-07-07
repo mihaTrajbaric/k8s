@@ -2,38 +2,31 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 import base64
-
-K8S_IMP_ERR = None
-try:
-    from kubernetes import config, dynamic
-    from kubernetes.client import api_client, exceptions
-    from kubernetes.dynamic.exceptions import (
-        NotFoundError, ResourceNotFoundError, ResourceNotUniqueError, DynamicApiError,
-        ConflictError, ForbiddenError, MethodNotAllowedError, BadRequestError,
-        KubernetesValidateMissing
-    )
-    HAS_K8S_MODULE_HELPER = True
-    k8s_import_exception = None
-except ImportError as e:
-    HAS_K8S_MODULE_HELPER = False
-    k8s_import_exception = e
-
-try:
-    import urllib3
-    urllib3.disable_warnings()
-except ImportError:
-    pass
+import re
 
 
-# TODO Import checking
-# TODO configuration
+def execute_module(module, k8s_ansible_mixin, resource_definition):
 
-def get_api_client(module):
-    # TODO expand api client options
-    dyn_client = dynamic.DynamicClient(
-        api_client.ApiClient(configuration=config.load_kube_config())
-    )
-    return dyn_client
+    k8s_ansible_mixin.module = module
+    k8s_ansible_mixin.module.params['resource_definition'] = resource_definition
+
+    k8s_ansible_mixin.argspec = module.argument_spec
+    k8s_ansible_mixin.check_mode = k8s_ansible_mixin.module.check_mode
+    k8s_ansible_mixin.params = k8s_ansible_mixin.module.params
+    k8s_ansible_mixin.fail_json = k8s_ansible_mixin.module.fail_json
+    k8s_ansible_mixin.fail = k8s_ansible_mixin.module.fail_json
+    k8s_ansible_mixin.exit_json = k8s_ansible_mixin.module.exit_json
+    k8s_ansible_mixin.warn = k8s_ansible_mixin.module.warn
+    k8s_ansible_mixin.warnings = []
+
+    k8s_ansible_mixin.kind = resource_definition.get('kind')
+    k8s_ansible_mixin.api_version = resource_definition.get('apiVersion')
+    k8s_ansible_mixin.name = k8s_ansible_mixin.params.get('name')
+    k8s_ansible_mixin.namespace = k8s_ansible_mixin.params.get('namespace')
+
+    k8s_ansible_mixin.check_library_version()
+    k8s_ansible_mixin.set_resource_definitions(module)
+    k8s_ansible_mixin.execute_module()
 
 
 class Base64:
@@ -56,140 +49,21 @@ class Base64:
             return False
 
 
-class Result:
-    api_version = None
-    kind = None
-    spec = None
-    status = None
-    error = None
-    metadata = None
-    # duration = None
+class Validators:
 
+    @staticmethod
+    def alphanumeric(value):
+        """
+        validates that value consist only of alphanumeric characters, '-', '_' or '.'.
+        """
+        regex = re.compile(r'^[a-zA-Z0-9_.-]+$')
+        return bool(regex.match(str(value)))
 
-class K8s:
-
-    def __init__(self, module, definition):
-        self.client = None
-        self.module = module
-        self.check_mode = self.module.check_mode
-        self.argspec = self.module.argument_spec
-        self.params = self.module.params
-        self.exit_json = self.module.exit_json
-        self.fail_json = self.module.fail_json
-
-        self.state = self.module.params.get('state')
-        self.name = self.module.params.get('name')
-        self.namespace = self.module.params.get('namespace')
-        self.force = self.module.params.get('force')
-        self.definition = definition
-        self.api_version = self.definition.get('apiVersion')
-        self.kind = self.definition.get('kind')
-        self.metadata = self.definition.get('metadata')
-
-        self.resource = None
-
-    def find_resource(self, fail=False):
-        for attribute in ['kind', 'name', 'singular_name']:
-            try:
-                return self.client.resources.get(**{'api_version': self.api_version, attribute: self.kind})
-            except (ResourceNotFoundError, ResourceNotUniqueError):
-                pass
-        try:
-            return self.client.resources.get(api_version=self.api_version, kind=self.kind)
-        except (ResourceNotFoundError, ResourceNotUniqueError):
-            if fail:
-                self.fail_json(msg='Failed to find exact match for {0}.{1} by [kind, name, singularName, shortNames]'.format(
-                    self.api_version, self.kind))
-
-    def execute_module(self):
-        changed = False
-        result = None
-        existing = None
-
-        try:
-            self.client = get_api_client(self.module)
-
-        except urllib3.exceptions.RequestError as e:
-            self.fail_json(msg="Couldn't connect to Kubernetes: %s" % str(e))
-
-        self.resource = self.find_resource(fail=True)
-
-        try:
-            existing = self.resource.get(name=self.name, namespace=self.namespace)
-        except NotFoundError:
-            pass
-        except (DynamicApiError, ForbiddenError) as e:
-            self.fail_json(msg='Failed to retrieve requested object: {0}'.format(e.body), error=e.status, status=e.status, reason=e.reason)
-
-        if self.state == 'absent':
-            if not existing:
-                pass
-            else:
-                changed = True
-                if not self.check_mode:
-                    try:
-                        self.resource.delete(name=self.name, namespace=self.namespace)
-                    except DynamicApiError as e:
-                        self.fail_json(msg="Failed to delete object: {0}".format(e.body), error=e.status,
-                                       status=e.status, reason=e.reason)
-        else:
-            # state present
-            if not existing:
-                changed = True
-                if not self.check_mode:
-                    try:
-                        result = self.resource.create(body=self.definition, namespace=self.namespace).to_dict()
-                    except DynamicApiError as e:
-                        self.fail_json(msg="Failed to create object: {0}".format(e.body), error=e.status,
-                                       status=e.status, reason=e.reason)
-                else:
-                    result = self.definition
-            else:
-                if self.force:
-                    changed = True
-                    if not self.check_mode:
-                        try:
-                            result = self.resource.replace(
-                                name=self.name, namespace=self.namespace, body=self.definition
-                            ).to_dict()
-                        except DynamicApiError as e:
-                            self.fail_json(msg="Failed to replace object: {0}".format(e.body), error=e.status,
-                                           status=e.status, reason=e.reason)
-                    else:
-                        result = self.definition
-                else:
-                    if not self.object_diff(existing.to_dict(), self.definition):
-                        result = existing.to_dict()
-                    else:
-                        changed = True
-                        if not self.check_mode:
-                            try:
-                                result = self.resource.patch(
-                                    name=self.name, namespace=self.namespace, body=self.definition
-                                ).to_dict()
-                            except DynamicApiError as e:
-                                self.fail_json(msg="Failed to patch object: {0}".format(e.body), error=e.status,
-                                               status=e.status, reason=e.reason)
-                        else:
-                            # TODO return how patched object would look like
-                            pass
-        # TODO wait
-
-        self.exit_json(**{
-            'changed': changed,
-            'result': result
-        })
-
-    # check if old has any new keys
-    def object_diff(self, old_object, new_object):
-        different = False
-        for key, value_new in new_object.items():
-            try:
-                value_old = old_object[key]
-            except KeyError:
-                return True
-            if isinstance(value_new, dict) and isinstance(value_old, dict):
-                different = different or self.object_diff(value_old, value_new)
-            else:
-                different = different or (value_new != value_old)
-        return different
+    @staticmethod
+    def string_string_dict(_dict):
+        """
+        Ensures all values are strings
+        """
+        if _dict is None:
+            return True
+        return all([isinstance(value, str) and isinstance(key, str) for key, value in _dict.items()])
