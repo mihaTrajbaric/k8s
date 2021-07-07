@@ -70,5 +70,43 @@ def common_arg_spec():
 
 
 COMMON_MUTALLY_EXCLUSIVE = [
-        ('merge_type', 'apply')
-    ]
+    ('merge_type', 'apply')
+]
+
+COMMON_RETURN = r'''
+result:
+  description:
+  - The created, patched, or otherwise present object. Will be empty in the case of a deletion.
+  returned: success
+  type: complex
+  contains:
+     api_version:
+       description: The versioned schema of this representation of an object.
+       returned: success
+       type: str
+     kind:
+       description: Represents the REST resource this object represents.
+       returned: success
+       type: str
+     metadata:
+       description: Standard object metadata. Includes name, namespace, annotations, labels, etc.
+       returned: success
+       type: complex
+     spec:
+       description: Specific attributes of the object.
+       returned: success
+       type: complex
+     status:
+       description: Current status details for the object.
+       returned: success
+       type: complex
+     duration:
+       description: elapsed time of task in seconds
+       returned: when C(wait) is true
+       type: int
+       sample: 48
+     error:
+       description: error while trying to create/delete the object.
+       returned: error
+       type: complex
+'''

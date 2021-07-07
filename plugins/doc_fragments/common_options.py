@@ -71,8 +71,8 @@ options:
         - Whether to append a hash to a resource name for immutability purposes
         - Applies only to ConfigMap and Secret resources
         - The parameter will be silently ignored for other resource kinds
-        - The full definition of an object is needed to generate the hash - this means that deleting an object created 
-          with append_hash will only work if the same object is passed with state=absent (alternatively, just use 
+        - The full definition of an object is needed to generate the hash - this means that deleting an object created
+          with append_hash will only work if the same object is passed with state=absent (alternatively, just use
           state=absent with the name including the generated hash and append_hash=no)
         default: False
         type: bool
