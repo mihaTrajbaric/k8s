@@ -92,14 +92,48 @@ EXAMPLES = r'''
       db_ip: postgres-service
 '''
 
-import copy
+RETURN = r'''
+result:
+  description:
+  - The created, patched, or otherwise present object. Will be empty in the case of a deletion.
+  returned: success
+  type: complex
+  contains:
+     api_version:
+       description: The versioned schema of this representation of an object.
+       returned: success
+       type: str
+     kind:
+       description: Represents the REST resource this object represents.
+       returned: success
+       type: str
+     metadata:
+       description: Standard object metadata. Includes name, namespace, annotations, labels, etc.
+       returned: success
+       type: complex
+     spec:
+       description: Specific attributes of the object.
+       returned: success
+       type: complex
+     status:
+       description: Current status details for the object.
+       returned: success
+       type: complex
+     duration:
+       description: elapsed time of task in seconds
+       returned: when C(wait) is true
+       type: int
+       sample: 48
+     error:
+       description: error while trying to create/delete the object.
+       returned: error
+       type: complex
+'''
 
 from ansible_collections.kubernetes.core.plugins.module_utils.ansiblemodule import AnsibleModule
 from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (common_arg_spec, METADATA_ARG_SPEC,
                                                                                COMMON_MUTALLY_EXCLUSIVE, COMMON_RETURN)
-from ansible_collections.sodalite.k8s.plugins.module_utils.validation import Validators
-
-RETURN = COMMON_RETURN
+from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators, CommonValidation
 
 
 def definition(params):
@@ -128,10 +162,10 @@ def definition(params):
 
 def validate(module, k8s_definition):
 
+    CommonValidation.metadata(module, k8s_definition)
+
     data = k8s_definition.get('data', dict())
     binary_data = k8s_definition.get('binaryData', dict())
-    annotations = k8s_definition['metadata'].get('annotations', dict())
-    labels = k8s_definition['metadata'].get('labels', dict())
 
     data_keys_valid = all([Validators.alphanumeric(key) for key in data.keys()])
     binary_data_keys_valid = all([Validators.alphanumeric(key) for key in binary_data.keys()])
@@ -145,15 +179,10 @@ def validate(module, k8s_definition):
         module.fail_json(msg="Keys in data and binary_data should not overlap")
     if not Validators.string_byte_dict(binary_data):
         module.fail_json(msg="binary_data should be map[string][]byte")
-    if not Validators.string_string_dict(annotations):
-        module.fail_json(msg="Metadata.annotations should be map[string]string")
-    if not Validators.string_string_dict(labels):
-        module.fail_json(msg="Metadata.labels should be map[string]string")
 
 
 def main():
     argspec = common_arg_spec()
-    argspec.update(copy.deepcopy(METADATA_ARG_SPEC))
     argspec.update(dict(
         data=dict(type='dict'),
         binary_data=dict(type='dict'),
@@ -161,7 +190,7 @@ def main():
     ))
 
     module = AnsibleModule(argument_spec=argspec, mutually_exclusive=COMMON_MUTALLY_EXCLUSIVE, supports_check_mode=True)
-    from ansible_collections.sodalite.k8s.plugins.module_utils.common import (execute_module)
+    from ansible_collections.sodalite.k8s.plugins.module_utils.kubernetes import (execute_module)
 
     configmap_def = definition(module.params)
     validate(module, configmap_def)

@@ -1,30 +1,92 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-from ansible_collections.kubernetes.core.plugins.module_utils.common import (K8sAnsibleMixin, get_api_client)
+import base64
+import re
 
 
-def execute_module(module, resource_definition):
-    k8s_ansible_mixin = K8sAnsibleMixin(module)
-    k8s_ansible_mixin.client = get_api_client(module=module)
+class Base64:
 
-    k8s_ansible_mixin.module = module
-    k8s_ansible_mixin.module.params['resource_definition'] = resource_definition
+    @staticmethod
+    def encode(message):
+        return base64.b64encode(message.encode('ascii')).decode('ascii')
 
-    k8s_ansible_mixin.argspec = module.argument_spec
-    k8s_ansible_mixin.check_mode = k8s_ansible_mixin.module.check_mode
-    k8s_ansible_mixin.params = k8s_ansible_mixin.module.params
-    k8s_ansible_mixin.fail_json = k8s_ansible_mixin.module.fail_json
-    k8s_ansible_mixin.fail = k8s_ansible_mixin.module.fail_json
-    k8s_ansible_mixin.exit_json = k8s_ansible_mixin.module.exit_json
-    k8s_ansible_mixin.warn = k8s_ansible_mixin.module.warn
-    k8s_ansible_mixin.warnings = []
+    @staticmethod
+    def decode(message):
+        return base64.b64decode(message.encode('ascii')).decode('ascii')
 
-    k8s_ansible_mixin.kind = resource_definition.get('kind')
-    k8s_ansible_mixin.api_version = resource_definition.get('apiVersion')
-    k8s_ansible_mixin.name = k8s_ansible_mixin.params.get('name')
-    k8s_ansible_mixin.namespace = k8s_ansible_mixin.params.get('namespace')
+    @staticmethod
+    def validate(message):
+        try:
+            return Base64.encode(Base64.decode(message)) == message
+        except Exception:
+            return False
 
-    k8s_ansible_mixin.check_library_version()
-    k8s_ansible_mixin.set_resource_definitions(module)
-    k8s_ansible_mixin.execute_module()
+
+class Quantity:
+
+    @staticmethod
+    def validate():
+        pass
+
+
+class Validators:
+
+    @staticmethod
+    def alphanumeric(value):
+        """
+        validates that value consist only of alphanumeric characters, '-', '_' or '.'.
+        """
+        regex = re.compile(r'^[a-zA-Z0-9_.-]+$')
+        return bool(regex.match(str(value)))
+
+    @staticmethod
+    def string_string_dict(_dict):
+        """
+        Ensures all keys and values are strings
+        """
+        if _dict is None:
+            return True
+        return all([isinstance(value, str) and isinstance(key, str) for key, value in _dict.items()])
+
+    @staticmethod
+    def string_byte_dict(_dict):
+        """
+        Ensures all keys are strings and all values are base64
+        """
+        if _dict is None:
+            return True
+        return all([isinstance(value, str) and Validators.base64(value) for key, value in _dict.items()])
+
+    @staticmethod
+    def base64(message):
+        return Base64.validate(message)
+
+    @staticmethod
+    def quantity(string):
+        # TODO implement quantity validation
+        return True
+
+    @staticmethod
+    def string_quantity_dict(_dict):
+        """
+        Ensures all keys are strings and all values are quantity
+        """
+        if _dict is None:
+            return True
+        return all([isinstance(value, str) and Validators.quantity(value) for key, value in _dict.items()])
+
+
+class CommonValidation:
+
+    @staticmethod
+    def metadata(module, k8s_definition):
+        """
+        validates metadata
+        """
+        annotations = k8s_definition['metadata'].get('annotations', dict())
+        labels = k8s_definition['metadata'].get('labels', dict())
+        if not Validators.string_string_dict(annotations):
+            module.fail_json(msg="Metadata.annotations should be map[string]string")
+        if not Validators.string_string_dict(labels):
+            module.fail_json(msg="Metadata.labels should be map[string]string")

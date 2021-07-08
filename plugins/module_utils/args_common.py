@@ -65,6 +65,7 @@ def common_arg_spec():
     argument_spec = copy.deepcopy(COMMON_ARG_SPEC)
     argument_spec.update(copy.deepcopy(AUTH_ARG_SPEC))
     argument_spec.update(copy.deepcopy(WAIT_ARG_SPEC))
+    argument_spec.update(copy.deepcopy(METADATA_ARG_SPEC))
     argument_spec['delete_options'] = dict(type='dict', default=None, options=copy.deepcopy(DELETE_OPTS_ARG_SPEC))
     return argument_spec
 
