@@ -87,6 +87,6 @@ class CommonValidation:
         annotations = k8s_definition['metadata'].get('annotations', dict())
         labels = k8s_definition['metadata'].get('labels', dict())
         if not Validators.string_string_dict(annotations):
-            module.fail_json(msg="Metadata.annotations should be map[string]string")
+            module.fail_json(msg="Annotations should be map[string]string")
         if not Validators.string_string_dict(labels):
-            module.fail_json(msg="Metadata.labels should be map[string]string")
+            module.fail_json(msg="Labels should be map[string]string")

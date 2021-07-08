@@ -73,14 +73,13 @@ EXAMPLES = r'''
     binary_data:
       db_ip: cG9zdGdyZXMtc2VydmljZQ==
 # Create config with metadata
-- name: Metadata
+- name: Labels and annotations
   sodalite.k8s.config_map:
     name: xOpera-config
-    metadata:
-      labels:
-        app: postgres
-      annotations:
-        type: my_config
+    labels:
+      app: postgres
+    annotations:
+      type: my_config
     data:
       db_ip: postgres-service
 # Remove config
@@ -134,30 +133,25 @@ from ansible_collections.kubernetes.core.plugins.module_utils.ansiblemodule impo
 from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (common_arg_spec, METADATA_ARG_SPEC,
                                                                                COMMON_MUTALLY_EXCLUSIVE, COMMON_RETURN)
 from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators, CommonValidation
+from ansible_collections.sodalite.k8s.plugins.module_utils.helper import clean_dict
 
 
 def definition(params):
-
-    data = params.get('data')
-    binary_data = params.get('binary_data')
-    metadata = params.get('metadata')
 
     body = {
         "apiVersion": "v1",
         "kind": "ConfigMap",
         "metadata": {
-            "name": params.get('name')
+            "name": params.get('name'),
+            "labels": params.get('labels'),
+            "annotations": params.get('annotations')
         },
-        "immutable": params.get('immutable')
+        "immutable": params.get('immutable'),
+        "binaryData": params.get('binary_data'),
+        "data": params.get('data')
     }
-    if binary_data:
-        body['binaryData'] = binary_data
-    if data:
-        body['data'] = data
-    if metadata:
-        body['metadata'].update(metadata)
 
-    return body
+    return clean_dict(body)
 
 
 def validate(module, k8s_definition):
@@ -193,7 +187,9 @@ def main():
     from ansible_collections.sodalite.k8s.plugins.module_utils.kubernetes import (execute_module)
 
     configmap_def = definition(module.params)
-    validate(module, configmap_def)
+    if module.params.get('name') != 'absent':
+        validate(module, configmap_def)
+
     execute_module(module, configmap_def)
 
 

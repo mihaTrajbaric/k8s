@@ -224,8 +224,8 @@ def definition(params):
         "kind": "PersistentVolumeClaim",
         "metadata": {
             "name": params.get('name'),
-            "labels": (params.get('metadata') or {}).get('labels'),
-            "annotations": (params.get('metadata') or {}).get('annotations')
+            "labels": params.get('labels'),
+            "annotations": params.get('annotations')
         },
         'spec': {
             'accessModes': params.get('access_modes'),

@@ -54,7 +54,6 @@ options:
 author:
     - Mihael Trajbarič (@mihaTrajbaric)
 '''
-# TODO add more examples
 EXAMPLES = r'''
 # Create new Secret
 - name: Secret for xOpera rest api
@@ -78,14 +77,13 @@ EXAMPLES = r'''
     string_data:
       db_ip: postgres-service
 # Create secret with metadata
-- name: Metadata
+- name: Labels and annotations
   sodalite.k8s.secret:
     name: xOpera-secret
-    metadata:
-      labels:
-        app: postgres
-      annotations:
-        type: my_secret
+    labels:
+      app: postgres
+    annotations:
+      type: my_secret
     data:
       db_ip: cG9zdGdyZXMtc2VydmljZQ==
 # Remove secret
@@ -138,31 +136,26 @@ from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (c
                                                                                COMMON_MUTALLY_EXCLUSIVE,
                                                                                COMMON_RETURN)
 from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators, CommonValidation
+from ansible_collections.sodalite.k8s.plugins.module_utils.helper import clean_dict
 
 
 def definition(params):
-
-    data = params.get('data')
-    string_data = params.get('string_data')
-    metadata = params.get('metadata')
 
     body = {
         "apiVersion": "v1",
         "kind": "Secret",
         "metadata": {
-            "name": params.get('name')
+            "name": params.get('name'),
+            "labels": params.get('labels'),
+            "annotations": params.get('annotations')
         },
         "immutable": params.get('immutable'),
-        "type": params.get('type')
+        "type": params.get('type'),
+        "stringData": params.get('string_data'),
+        "data": params.get('data'),
     }
-    if string_data:
-        body['stringData'] = string_data
-    if data:
-        body['data'] = data
-    if metadata:
-        body['metadata'].update(metadata)
 
-    return body
+    return clean_dict(body)
 
 
 def validate(module, k8s_definition):
@@ -198,7 +191,8 @@ def main():
     from ansible_collections.sodalite.k8s.plugins.module_utils.kubernetes import (execute_module)
 
     secret_def = definition(module.params)
-    validate(module, secret_def)
+    if module.params.get('name') != 'absent':
+        validate(module, secret_def)
     execute_module(module, secret_def)
 
 

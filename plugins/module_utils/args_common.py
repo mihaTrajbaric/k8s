@@ -50,14 +50,8 @@ COMMON_ARG_SPEC = dict(
 
 
 METADATA_ARG_SPEC = dict(
-    metadata=dict(
-        type='dict',
-        default={},
-        options=dict(
-            labels=dict(type='dict'),
-            annotations=dict(type='dict')
-        )
-    )
+    labels=dict(type='dict'),
+    annotations=dict(type='dict')
 )
 
 
