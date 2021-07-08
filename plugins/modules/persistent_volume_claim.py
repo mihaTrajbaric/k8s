@@ -283,11 +283,11 @@ def validate(module, k8s_definition):
     if 'resources' in spec_keys:
         limits = k8s_definition['spec']['resources'].get('limits', dict())
         if not Validators.string_quantity_dict(limits):
-            module.fail_json(msg="Resources.limits should be map[string]Quantity")
+            module.fail_json(msg="Storage_limit should be map[string]Quantity")
 
         requests = k8s_definition['spec']['resources'].get('requests', dict())
         if not Validators.string_quantity_dict(requests):
-            module.fail_json(msg="Resources.requests should be map[string]Quantity")
+            module.fail_json(msg="Storage_request should be map[string]Quantity")
 
 
 def main():
