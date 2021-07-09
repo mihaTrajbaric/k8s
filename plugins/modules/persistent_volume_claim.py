@@ -54,6 +54,7 @@ options:
                 - A label selector requirement is a selector that contains values, a key, and an operator that relates
                   the key and values.
                 type: list
+                elements: dict
                 suboptions:
                     key:
                         description:
@@ -65,7 +66,7 @@ options:
                         description:
                         - Represents a key's relationship to a set of values.
                         type: str
-                        choices: [In, NotIn, Exists DoesNotExist]
+                        choices: [In, NotIn, Exists, DoesNotExist]
                         required: yes
                     values:
                         description:
@@ -75,7 +76,7 @@ options:
                         - This array is replaced during a strategic merge patch.
                         type: list
                         elements: str
-    storage_request:
+    storage_requests:
         description:
         - Describes the minimum amount of compute resources required.
         - Required when I(state=present)
@@ -94,7 +95,6 @@ options:
         - When both I(selector) and I(storage_class_name) are specified together, the requirements are C(ANDed)
           together.
         type: str
-        alias: storage_class
     volume_mode:
         description:
         - Defines what type of volume is required by the claim.
@@ -189,15 +189,15 @@ result:
      metadata:
        description: Standard object metadata. Includes name, namespace, annotations, labels, etc.
        returned: success
-       type: complex
+       type: dict
      spec:
        description: Specific attributes of the object.
        returned: success
-       type: complex
+       type: dict
      status:
        description: Current status details for the object.
        returned: success
-       type: complex
+       type: dict
      duration:
        description: elapsed time of task in seconds
        returned: when C(wait) is true
@@ -206,13 +206,12 @@ result:
      error:
        description: error while trying to create/delete the object.
        returned: error
-       type: complex
+       type: dict
 '''
 
-from ansible_collections.kubernetes.core.plugins.module_utils.ansiblemodule import AnsibleModule
+from ansible_collections.sodalite.k8s.plugins.module_utils.ansiblemodule import AnsibleModule
 from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (common_arg_spec,
-                                                                               COMMON_MUTALLY_EXCLUSIVE,
-                                                                               COMMON_RETURN)
+                                                                               COMMON_MUTUALLY_EXCLUSIVE)
 from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators, CommonValidation
 from ansible_collections.sodalite.k8s.plugins.module_utils.helper import clean_dict
 
@@ -234,8 +233,8 @@ def definition(params):
                 'matchLabels': (params.get('selector') or {}).get('match_labels')
             },
             'resources': {
-                'request': {
-                    'storage': params.get('storage_request')
+                'requests': {
+                    'storage': params.get('storage_requests')
                 },
                 'limits': {
                     'storage': params.get('storage_limit')
@@ -269,8 +268,8 @@ def validate(module, k8s_definition):
             valid_keys = ('In', 'NotIn', 'Exists', 'DoesNotExist')
             operator = expression.get('operator')
             if operator not in valid_keys:
-                module.fail_json(msg=f"Every selector.match_expressions.key should be chosen "
-                                     f"from ({', '.join(valid_keys)})")
+                module.fail_json(msg="Every selector.match_expressions.key should be chosen "
+                                     "from {0}".format({', '.join(valid_keys)}))
             values_condition = (operator in ('In', 'NotIn')) == bool(expression.get('values'))
             if not values_condition:
                 module.fail_json(msg="If in any selector.match_expressions operator is 'In' or 'NotIn', the values "
@@ -296,27 +295,27 @@ def main():
         access_modes=dict(type='list', elements='str'),
         selector=dict(type='dict', options=dict(
             match_labels=dict(type='dict'),
-            match_expressions=dict(type=list, options=dict(
-                key=dict(type='str', required=True),
-                operator=dict(type='str', required=True),
+            match_expressions=dict(type='list', elements='dict', options=dict(
+                key=dict(type='str', required=True, no_log=False),
+                operator=dict(type='str', required=True, choices=['In', 'NotIn', 'Exists', 'DoesNotExist']),
                 values=dict(type='list', elements='str')
             ))
         )),
-        storage_request=dict(type='str'),
+        storage_requests=dict(type='str'),
         storage_limit=dict(type='str'),
         volume_name=dict(type='str'),
-        storage_class_name=dict(type='str', alias='storage_class'),
+        storage_class_name=dict(type='str'),
         volume_mode=dict(type='str', choices=['Filesystem', 'Block'], default='Filesystem')
     ))
     required_if = [
-        ('state', 'present', ('access_modes', 'storage_request'))
+        ('state', 'present', ('access_modes', 'storage_requests'))
     ]
 
     module = AnsibleModule(argument_spec=argspec,
-                           mutually_exclusive=COMMON_MUTALLY_EXCLUSIVE,
+                           mutually_exclusive=COMMON_MUTUALLY_EXCLUSIVE,
                            required_if=required_if,
                            supports_check_mode=True)
-    from ansible_collections.sodalite.k8s.plugins.module_utils.kubernetes import (execute_module)
+    from ansible_collections.sodalite.k8s.plugins.module_utils.k8s_connector import execute_module
 
     volume_claim_def = definition(module.params)
     if module.params.get('name') != 'absent':

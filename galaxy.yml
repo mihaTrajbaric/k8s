@@ -7,7 +7,7 @@ readme: README.md
 authors:
   - Mihael Trajbarič (github.com/mihaTrajbaric)
 dependencies:
-  - kubernetes.core: ">=2.0.0"
+  kubernetes.core: ">=2.0.0"
 description: null
 license_file: LICENSE
 tags:

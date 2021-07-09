@@ -109,15 +109,15 @@ result:
      metadata:
        description: Standard object metadata. Includes name, namespace, annotations, labels, etc.
        returned: success
-       type: complex
+       type: dict
      spec:
        description: Specific attributes of the object.
        returned: success
-       type: complex
+       type: dict
      status:
        description: Current status details for the object.
        returned: success
-       type: complex
+       type: dict
      duration:
        description: elapsed time of task in seconds
        returned: when C(wait) is true
@@ -126,12 +126,12 @@ result:
      error:
        description: error while trying to create/delete the object.
        returned: error
-       type: complex
+       type: dict
 '''
 
-from ansible_collections.kubernetes.core.plugins.module_utils.ansiblemodule import AnsibleModule
-from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (common_arg_spec, METADATA_ARG_SPEC,
-                                                                               COMMON_MUTALLY_EXCLUSIVE, COMMON_RETURN)
+from ansible_collections.sodalite.k8s.plugins.module_utils.ansiblemodule import AnsibleModule
+from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (common_arg_spec,
+                                                                               COMMON_MUTUALLY_EXCLUSIVE)
 from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators, CommonValidation
 from ansible_collections.sodalite.k8s.plugins.module_utils.helper import clean_dict
 
@@ -183,8 +183,8 @@ def main():
         immutable=dict(type='bool', default=False)
     ))
 
-    module = AnsibleModule(argument_spec=argspec, mutually_exclusive=COMMON_MUTALLY_EXCLUSIVE, supports_check_mode=True)
-    from ansible_collections.sodalite.k8s.plugins.module_utils.kubernetes import (execute_module)
+    module = AnsibleModule(argument_spec=argspec, mutually_exclusive=COMMON_MUTUALLY_EXCLUSIVE, supports_check_mode=True)
+    from ansible_collections.sodalite.k8s.plugins.module_utils.k8s_connector import execute_module
 
     configmap_def = definition(module.params)
     if module.params.get('name') != 'absent':

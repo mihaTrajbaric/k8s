@@ -5,6 +5,7 @@ __metaclass__ = type
 def clean_dict(d):
     """
     Removes all keys, that do not have any real data.
+    (Nested empty dicts or lists don't count as real data)
     """
     if isinstance(d, dict):
         cleaned_recursively = {k: clean_dict(v) for k, v in d.items()}
