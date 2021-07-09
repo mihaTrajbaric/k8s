@@ -102,14 +102,13 @@ jobs:
       - name: Install ansible-base (${{ matrix.ansible }})
         run: pip install https://github.com/ansible/ansible/archive/${{ matrix.ansible }}.tar.gz --disable-pip-version-check
 
-      # OPTIONAL If your unit test requires Python libraries from other collections
-      # Install them like this
+      # Install kubernetes.core
       - name: Install collection dependencies
-        run: ansible-galaxy collection install ansible.netcommon ansible.utils -p .
+        run: ansible-galaxy collection install kubernetes.core -p .
 
       # Run the unit tests
       - name: Run unit test
-        run: ansible-test units -v --color --docker --coverage
+        run: ansible-test units -v --color --docker --coverage --python 3.8
         working-directory: ./ansible_collections/${{env.NAMESPACE}}/${{env.COLLECTION_NAME}}
 
         # ansible-test support producing code coverage date
@@ -144,8 +143,6 @@ jobs:
           - stable-2.11
           - devel
         python:
-          - 2.6
-          - 2.7
           - 3.5
           - 3.6
           - 3.7

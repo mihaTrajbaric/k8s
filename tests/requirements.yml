@@ -1,0 +1,2 @@
+sanity_tests_dependencies:
+  - kubernetes.core: ">=2.0.0"
