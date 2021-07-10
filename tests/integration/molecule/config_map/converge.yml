@@ -1,0 +1,139 @@
+---
+- name: Converge
+  collections:
+    - sodalite.k8s
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Minimal example
+      sodalite.k8s.config_map:
+        name: config-minimal
+        state: present
+        data:
+          db_ip: postgres-service
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.result.apiVersion == 'v1'
+          - result.result.kind == 'ConfigMap'
+          - result.result.metadata.name == 'config-minimal'
+          - result.result.metadata.namespace == 'default'
+          - result.result.data.db_ip == 'postgres-service'
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: ConfigMap
+        name: config-minimal
+        namespace: default
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 1 }}"
+          - results.resources[0].metadata.name == 'config-minimal'
+
+    - name: Idempotency
+      sodalite.k8s.config_map:
+        name: config-minimal
+        state: present
+        data:
+          db_ip: postgres-service
+      register: result
+
+    - assert:
+        that:
+          - result is not changed
+
+    - name: Patch
+      sodalite.k8s.config_map:
+        name: config-minimal
+        state: patched
+        data:
+          db_ip: postgres-service
+          db_ip2: another-service
+      register: result
+
+    - assert:
+        that:
+          - result.result.metadata.name == 'config-minimal'
+          - result.result.metadata.namespace == 'default'
+          - result.result.data.db_ip == 'postgres-service'
+          - result.result.data.db_ip2 == 'another-service'
+
+
+    - name: Delete minimal example
+      sodalite.k8s.config_map:
+        name: config-minimal
+        state: absent
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'
+          - result.result.kind == 'Status'
+          - result.result.status == 'Success'
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: ConfigMap
+        name: config-minimal
+        namespace: default
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 0}}"
+
+    - name: Full example
+      sodalite.k8s.config_map:
+        name: config-full
+        state: present
+        data:
+          db_ip: postgres-service
+        binary_data:
+          db_2_ip: cG9zdGdyZXM=
+        immutable: true
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.result.apiVersion == 'v1'
+          - result.result.kind == 'ConfigMap'
+          - result.result.metadata.name == 'config-full'
+          - result.result.metadata.namespace == 'default'
+          - result.result.data.db_ip == 'postgres-service'
+          - result.result.binaryData.db_2_ip == 'cG9zdGdyZXM='
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: ConfigMap
+        name: config-full
+        namespace: default
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 1 }}"
+          - results.resources[0].metadata.name == 'config-full'
+
+
+    - name: Delete minimal example
+      sodalite.k8s.config_map:
+        name: config-full
+        state: absent
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'
+          - result.result.kind == 'Status'
+          - result.result.status == 'Success'

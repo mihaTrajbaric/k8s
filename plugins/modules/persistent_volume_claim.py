@@ -76,7 +76,7 @@ options:
                         - This array is replaced during a strategic merge patch.
                         type: list
                         elements: str
-    storage_requests:
+    storage_request:
         description:
         - Describes the minimum amount of compute resources required.
         - Required when I(state=present)
@@ -234,7 +234,7 @@ def definition(params):
             },
             'resources': {
                 'requests': {
-                    'storage': params.get('storage_requests')
+                    'storage': params.get('storage_request')
                 },
                 'limits': {
                     'storage': params.get('storage_limit')
@@ -249,6 +249,9 @@ def definition(params):
 
 
 def validate(module, k8s_definition):
+    # TODO name should be alphanumeric with '-' and '.', without '_'
+    # TODO no patch in params!
+    # TODO rename to pvc, current module name is too long!
     CommonValidation.metadata(module, k8s_definition)
 
     spec_keys = list(k8s_definition['spec'].keys())
@@ -301,14 +304,14 @@ def main():
                 values=dict(type='list', elements='str')
             ))
         )),
-        storage_requests=dict(type='str'),
+        storage_request=dict(type='str'),
         storage_limit=dict(type='str'),
         volume_name=dict(type='str'),
         storage_class_name=dict(type='str'),
         volume_mode=dict(type='str', choices=['Filesystem', 'Block'], default='Filesystem')
     ))
     required_if = [
-        ('state', 'present', ('access_modes', 'storage_requests'))
+        ('state', 'present', ('access_modes', 'storage_request'))
     ]
 
     module = AnsibleModule(argument_spec=argspec,
@@ -318,7 +321,7 @@ def main():
     from ansible_collections.sodalite.k8s.plugins.module_utils.k8s_connector import execute_module
 
     volume_claim_def = definition(module.params)
-    if module.params.get('name') != 'absent':
+    if module.params.get('state') != 'absent':
         validate(module, volume_claim_def)
 
     execute_module(module, volume_claim_def)

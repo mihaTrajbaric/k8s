@@ -1,0 +1,123 @@
+---
+- name: Converge
+  collections:
+    - sodalite.k8s
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Minimal example
+      sodalite.k8s.persistent_volume_claim:
+        name: pvc-minimal
+        state: present
+        access_modes: ['ReadWriteOnce']
+        storage_request: 5Gi
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.result.apiVersion == 'v1'
+          - result.result.kind == 'PersistentVolumeClaim'
+          - result.result.metadata.name == 'pvc-minimal'
+          - result.result.metadata.namespace == 'default'
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: PersistentVolumeClaim
+        name: pvc-minimal
+        namespace: default
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 1 }}"
+          - results.resources[0].metadata.name == 'pvc-minimal'
+
+    - name: Delete minimal example
+      sodalite.k8s.persistent_volume_claim:
+        name: pvc-minimal
+        state: absent
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'
+
+    - name: Ensure example is really not on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: PersistentVolumeClaim
+        name: pvc-minimal
+        namespace: default
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 0}}"
+
+    - name: Full example
+      sodalite.k8s.persistent_volume_claim:
+        name: pvc-full
+        state: present
+        access_modes: [ 'ReadWriteOnce' ]
+        selector:
+          match_expressions:
+            - key: db
+              operator: In
+              values: ['postgres', 'mysql']
+          match_labels:
+            app: centos
+        storage_request: 5Gi
+        storage_limit: 10Gi
+        volume_name: my_volume
+        storage_class_name: my-storage
+        volume_mode: 'Block'
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.result.apiVersion == 'v1'
+          - result.result.kind == 'PersistentVolumeClaim'
+          - result.result.metadata.name == 'pvc-full'
+          - result.result.metadata.namespace == 'default'
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: PersistentVolumeClaim
+        name: pvc-full
+        namespace: default
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 1 }}"
+          - results.resources[0].metadata.name == 'pvc-full'
+          - results.resources[0].metadata.namespace == 'default'
+          - "{{ results.resources[0].spec.accessModes | length == 1 }}"
+          - results.resources[0].spec.accessModes[0] == 'ReadWriteOnce'
+          - "{{ results.resources[0].spec.selector.matchExpressions | length == 1 }}"
+          - results.resources[0].spec.selector.matchExpressions[0].key == 'db'
+          - results.resources[0].spec.selector.matchExpressions[0].operator == 'In'
+          - results.resources[0].spec.selector.matchExpressions[0]['values'] == ['postgres', 'mysql']
+          - results.resources[0].spec.selector.matchLabels.app == 'centos'
+          - results.resources[0].spec.resources.requests.storage == '5Gi'
+          - results.resources[0].spec.resources.limits.storage == '10Gi'
+          - results.resources[0].spec.volumeName == 'my_volume'
+          - results.resources[0].spec.storageClassName == 'my-storage'
+          - results.resources[0].spec.volumeMode == 'Block'
+
+    - name: Delete minimal example
+      sodalite.k8s.persistent_volume_claim:
+        name: pvc-full
+        state: absent
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'

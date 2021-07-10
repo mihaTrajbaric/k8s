@@ -187,7 +187,7 @@ def main():
     from ansible_collections.sodalite.k8s.plugins.module_utils.k8s_connector import execute_module
 
     configmap_def = definition(module.params)
-    if module.params.get('name') != 'absent':
+    if module.params.get('state') != 'absent':
         validate(module, configmap_def)
 
     execute_module(module, configmap_def)

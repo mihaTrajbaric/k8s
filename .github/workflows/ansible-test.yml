@@ -143,7 +143,6 @@ jobs:
           - stable-2.11
           - devel
         python:
-          - 3.5
           - 3.6
           - 3.7
           - 3.8
@@ -169,14 +168,13 @@ jobs:
       - name: Install ansible-base (${{ matrix.ansible }})
         run: pip install https://github.com/ansible/ansible/archive/${{ matrix.ansible }}.tar.gz --disable-pip-version-check
 
-      # OPTIONAL If your integration test requires Python libraries or modules from other collections
-      # Install them like this
       - name: Install collection dependencies
-        run: ansible-galaxy collection install ansible.netcommon -p .
+        run: ansible-galaxy collection install kubernetes.core -p .
 
       # Run the integration tests
       - name: Run integration test
-        run: ansible-test integration -v --color --retry-on-error --continue-on-error --diff --python ${{ matrix.python }} --docker --coverage
+#        run: ansible-test integration -v --color --retry-on-error --continue-on-error --diff --python ${{ matrix.python }} --docker --coverage
+        run: make integration
         working-directory: ./ansible_collections/${{env.NAMESPACE}}/${{env.COLLECTION_NAME}}
 
         # ansible-test support producing code coverage date

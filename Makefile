@@ -21,8 +21,13 @@ PYTHON_VERSION ?= `python -c 'import platform; print("{0}.{1}".format(platform.p
 test-sanity:
 	ansible-test sanity --docker -v --color --python $(PYTHON_VERSION) $(?TEST_ARGS)
 
-test-integration:
-	ansible-test integration --docker -v --color --retry-on-error --python $(PYTHON_VERSION) --continue-on-error --diff --coverage $(?TEST_ARGS)
+#test-integration:
+#	ansible-test integration --docker -v --color --retry-on-error --python $(PYTHON_VERSION) --continue-on-error --diff --coverage $(?TEST_ARGS)
+
+.PHONY: integration
+integration:  ## Run integration tests
+	pip install -r integration.requirements # -r collection.requirements
+	pytest -s --molecule-base-config=base.yml tests/integration/molecule
 
 test-unit:
 	ansible-test units --docker -v --color --coverage --python $(PYTHON_VERSION) $(?TEST_ARGS)

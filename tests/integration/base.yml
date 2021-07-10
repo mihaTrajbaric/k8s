@@ -1,0 +1,50 @@
+---
+scenario:
+  create_sequence:
+    - destroy
+    - create
+  test_sequence:
+    - create
+    - prepare
+    - converge
+  destroy_sequence:
+    - destroy
+dependency:
+  name: galaxy
+driver:
+  name: docker
+provisioner:
+  name: ansible
+  options:
+    vv: true
+  playbooks:
+    prepare: ../resources/prepare.yml
+  config_options:
+    defaults:
+      interpreter_python: auto_silent
+  lint:
+    enabled: false
+  inventory:
+    group_vars:
+      all:
+        namespace: ${TEST_NAMESPACE:-default}
+        kubeconfig: ${MOLECULE_EPHEMERAL_DIRECTORY}/.kubeconfig
+  env:
+    KUBECONFIG: ${MOLECULE_EPHEMERAL_DIRECTORY}/.kubeconfig
+    K8S_AUTH_KUBECONFIG: ${MOLECULE_EPHEMERAL_DIRECTORY}/.kubeconfig
+    # ANSIBLE_ROLES_PATH: ${MOLECULE_PROJECT_DIRECTORY}/roles
+    KIND_PORT: '${TEST_CLUSTER_PORT:-9443}'
+
+platforms:
+- name: kind-default
+  groups:
+  - k8s
+  image: bsycorp/kind:latest-1.16
+  privileged: True
+  override_command: no
+  exposed_ports:
+    - 8443/tcp
+    - 10080/tcp
+  published_ports:
+    - 0.0.0.0:${TEST_CLUSTER_PORT:-9443}:8443/tcp
+  pre_build_image: yes
