@@ -18,6 +18,7 @@ description: Creates k8s ConfigMap which holds configuration data for pods to co
 
 extends_documentation_fragment:
     - sodalite.k8s.common_options
+    - sodalite.k8s.update_options
     - sodalite.k8s.metadata_options
     - kubernetes.core.k8s_auth_options
     - kubernetes.core.k8s_wait_options
@@ -130,8 +131,8 @@ result:
 '''
 
 from ansible_collections.sodalite.k8s.plugins.module_utils.ansiblemodule import AnsibleModule
-from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (common_arg_spec,
-                                                                               COMMON_MUTUALLY_EXCLUSIVE)
+from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (update_arg_spec,
+                                                                               UPDATE_MUTUALLY_EXCLUSIVE)
 from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators, CommonValidation
 from ansible_collections.sodalite.k8s.plugins.module_utils.helper import clean_dict
 
@@ -161,10 +162,14 @@ def validate(module, k8s_definition):
     data = k8s_definition.get('data', dict())
     binary_data = k8s_definition.get('binaryData', dict())
 
-    data_keys_valid = all([Validators.alphanumeric(key) for key in data.keys()])
-    binary_data_keys_valid = all([Validators.alphanumeric(key) for key in binary_data.keys()])
+    data_keys_valid = all([Validators.alnum_ext(key) for key in data.keys()])
+    binary_data_keys_valid = all([Validators.alnum_ext(key) for key in binary_data.keys()])
     keys_unique = len(set(list(data.keys()) + list(binary_data.keys()))) == len(data.keys()) + len(binary_data.keys())
 
+    if not Validators.dns_subdomain(k8s_definition['metadata']['name']):
+        module.fail_json(msg="'name' should be a valid lowercase RFC 1123 subdomain. It must consist of lower case "
+                             "alphanumeric characters, '-' or '.', and must start and end with an "
+                             "alphanumeric character")
     if not data_keys_valid:
         module.fail_json(msg="Keys in data must consist of alphanumeric characters, '-', '_' or '.'")
     if not binary_data_keys_valid:
@@ -176,14 +181,14 @@ def validate(module, k8s_definition):
 
 
 def main():
-    argspec = common_arg_spec()
+    argspec = update_arg_spec()
     argspec.update(dict(
         data=dict(type='dict'),
         binary_data=dict(type='dict'),
         immutable=dict(type='bool', default=False)
     ))
 
-    module = AnsibleModule(argument_spec=argspec, mutually_exclusive=COMMON_MUTUALLY_EXCLUSIVE, supports_check_mode=True)
+    module = AnsibleModule(argument_spec=argspec, mutually_exclusive=UPDATE_MUTUALLY_EXCLUSIVE, supports_check_mode=True)
     from ansible_collections.sodalite.k8s.plugins.module_utils.k8s_connector import execute_module
 
     configmap_def = definition(module.params)

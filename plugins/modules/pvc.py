@@ -8,7 +8,7 @@ __metaclass__ = type
 
 DOCUMENTATION = r'''
 ---
-module: persistent_volume_claim
+module: pvc
 
 short_description: Creates k8s PersistentVolumeClaim
 
@@ -117,7 +117,7 @@ author:
 EXAMPLES = r'''
 # Create PersistentVolumeClaim
 - name: Create simple PersistentVolumeClaim
-  sodalite.k8s.persistent_volume_claim:
+  sodalite.k8s.pvc:
     name: pvc-test
     state: present
     access_modes:
@@ -127,7 +127,7 @@ EXAMPLES = r'''
 
 # Create PersistentVolumeClaim with match_expressions
 - name: PersistentVolumeClaim with matchExpressions selector
-  sodalite.k8s.persistent_volume_claim:
+  sodalite.k8s.pvc:
     name: pvc-test
     state: present
     selector:
@@ -142,7 +142,7 @@ EXAMPLES = r'''
 
 # Create PersistentVolumeClaim with match_labels
 - name: PersistentVolumeClaim with matchLabels selector
-  sodalite.k8s.persistent_volume_claim:
+  sodalite.k8s.pvc:
     name: pvc-test
     state: present
     selector:
@@ -155,7 +155,7 @@ EXAMPLES = r'''
 
 # Create PersistentVolumeClaim with ResourceRequirements
 - name: PersistentVolumeClaim with storage_request and storage_limit
-  sodalite.k8s.persistent_volume_claim:
+  sodalite.k8s.pvc:
     name: pvc-test
     state: present
     access_modes:
@@ -166,7 +166,7 @@ EXAMPLES = r'''
 
 # Remove PersistentVolumeClaim
 - name: Remove pvc
-  sodalite.k8s.persistent_volume_claim:
+  sodalite.k8s.pvc:
     name: pvc-test
     state: absent
 '''
@@ -210,8 +210,7 @@ result:
 '''
 
 from ansible_collections.sodalite.k8s.plugins.module_utils.ansiblemodule import AnsibleModule
-from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (common_arg_spec,
-                                                                               COMMON_MUTUALLY_EXCLUSIVE)
+from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import common_arg_spec
 from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators, CommonValidation
 from ansible_collections.sodalite.k8s.plugins.module_utils.helper import clean_dict
 
@@ -249,10 +248,12 @@ def definition(params):
 
 
 def validate(module, k8s_definition):
-    # TODO name should be alphanumeric with '-' and '.', without '_'
-    # TODO no patch in params!
-    # TODO rename to pvc, current module name is too long!
     CommonValidation.metadata(module, k8s_definition)
+
+    if not Validators.dns_subdomain(k8s_definition['metadata']['name']):
+        module.fail_json(msg="'name' should be a valid lowercase RFC 1123 subdomain. It must consist of lower case "
+                             "alphanumeric characters, '-' or '.', and must start and end with an "
+                             "alphanumeric character")
 
     spec_keys = list(k8s_definition['spec'].keys())
 
@@ -315,7 +316,6 @@ def main():
     ]
 
     module = AnsibleModule(argument_spec=argspec,
-                           mutually_exclusive=COMMON_MUTUALLY_EXCLUSIVE,
                            required_if=required_if,
                            supports_check_mode=True)
     from ansible_collections.sodalite.k8s.plugins.module_utils.k8s_connector import execute_module

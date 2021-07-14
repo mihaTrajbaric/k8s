@@ -7,7 +7,7 @@
   gather_facts: no
   tasks:
     - name: Minimal example
-      sodalite.k8s.persistent_volume_claim:
+      sodalite.k8s.pvc:
         name: pvc-minimal
         state: present
         access_modes: ['ReadWriteOnce']
@@ -36,7 +36,7 @@
           - results.resources[0].metadata.name == 'pvc-minimal'
 
     - name: Delete minimal example
-      sodalite.k8s.persistent_volume_claim:
+      sodalite.k8s.pvc:
         name: pvc-minimal
         state: absent
       register: result
@@ -59,7 +59,7 @@
           - "{{ results.resources | length == 0}}"
 
     - name: Full example
-      sodalite.k8s.persistent_volume_claim:
+      sodalite.k8s.pvc:
         name: pvc-full
         state: present
         access_modes: [ 'ReadWriteOnce' ]
@@ -112,7 +112,7 @@
           - results.resources[0].spec.volumeMode == 'Block'
 
     - name: Delete minimal example
-      sodalite.k8s.persistent_volume_claim:
+      sodalite.k8s.pvc:
         name: pvc-full
         state: absent
       register: result

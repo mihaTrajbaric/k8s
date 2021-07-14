@@ -4,13 +4,34 @@ __metaclass__ = type
 from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators
 
 
-def test_alphanumeric():
-    assert Validators.alphanumeric('foo-bar')
-    assert Validators.alphanumeric('foo_bar')
-    assert Validators.alphanumeric('foo.bar')
-    assert Validators.alphanumeric('FooBar')
-    assert Validators.alphanumeric('Foo.Bar-foo_bar')
-    assert not Validators.alphanumeric('#foo+bar')
+def test_alnum_ext():
+    assert Validators.alnum_ext('foo-bar')
+    assert Validators.alnum_ext('foo_bar')
+    assert Validators.alnum_ext('foo.bar')
+    assert Validators.alnum_ext('FooBar')
+    assert Validators.alnum_ext('Foo.Bar-foo_bar')
+    assert not Validators.alnum_ext('#foo+bar')
+
+
+def test_dns_subdomain():
+    assert Validators.dns_subdomain('a' * 253)
+    assert not Validators.dns_subdomain('a' * 254)
+    assert not Validators.dns_subdomain("aA3Bd2s")
+    assert not Validators.dns_subdomain("ab3d_a")
+    assert not Validators.dns_subdomain("3abd2a")
+    assert not Validators.dns_subdomain("abd2")
+    assert Validators.dns_subdomain("foo-bar.foo-35-bar")
+
+
+def test_dns_label():
+    assert Validators.dns_label('a' * 63)
+    assert not Validators.dns_label('a' * 64)
+    assert not Validators.dns_label("aA3Bd2s")
+    assert not Validators.dns_label("ab3d_a")
+    assert not Validators.dns_label("ab3d.a")
+    assert not Validators.dns_label("3abd2a")
+    assert not Validators.dns_label("abd2")
+    assert Validators.dns_label("foo-bar-foo-35-bar")
 
 
 def test_string_string_dict():

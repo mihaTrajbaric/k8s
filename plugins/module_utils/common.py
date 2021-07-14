@@ -33,12 +33,46 @@ class Quantity:
 class Validators:
 
     @staticmethod
-    def alphanumeric(value):
+    def alnum_ext(value):
         """
         validates that value consist only of alphanumeric characters, '-', '_' or '.'.
         """
         regex = re.compile(r'^[a-zA-Z0-9_.-]+$')
         return bool(regex.match(str(value)))
+
+    @staticmethod
+    def dns_subdomain(value):
+        """
+        validates that value is a valid DNS Subdomain Name (RFC 1123).
+        - contain no more than 253 characters
+        - contain only lowercase alphanumeric characters, '-' or '.'
+        - start with an alphanumeric character
+        - end with an alphanumeric character
+        """
+
+        length_valid = len(value) <= 253
+        regex = re.compile(r'^[a-z0-9.-]+$')
+        second_constraint = bool(regex.match(str(value)))
+        first_char_alpha = value[0].isalpha()
+        last_char_alpha = value[-1].isalpha()
+        return length_valid and second_constraint and first_char_alpha and last_char_alpha
+
+    @staticmethod
+    def dns_label(value):
+        """
+        validates that value is a valid DNS Label Name (RFC 1123).
+        - contain at most 63 characters
+        - contain only lowercase alphanumeric characters or '-'
+        - start with an alphanumeric character
+        - end with an alphanumeric character
+        """
+
+        length_valid = len(value) <= 63
+        regex = re.compile(r'^[a-z0-9-]+$')
+        second_constraint = bool(regex.match(str(value)))
+        first_char_alpha = value[0].isalpha()
+        last_char_alpha = value[-1].isalpha()
+        return length_valid and second_constraint and first_char_alpha and last_char_alpha
 
     @staticmethod
     def string_string_dict(_dict):

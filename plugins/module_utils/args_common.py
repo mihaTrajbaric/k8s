@@ -18,7 +18,10 @@ COMMON_ARG_SPEC = dict(
     namespace=dict(
         type='str',
         default='default'
-    ),
+    )
+)
+
+UPDATE_ARG_SPEC = dict(
     force=dict(
         type='bool',
         default=False
@@ -28,26 +31,11 @@ COMMON_ARG_SPEC = dict(
         elements='str',
         choices=['json', 'merge', 'strategic-merge']
     ),
-    validate=dict(
-        type='dict',
-        default=None,
-        options=dict(
-            fail_on_error=dict(type='bool'),
-            version=dict(),
-            strict=dict(type='bool', default=True)
-        )
-    ),
-    append_hash=dict(
-        type='bool',
-        default=False
-    ),
     apply=dict(
         type='bool',
         default=False
     )
-
 )
-
 
 METADATA_ARG_SPEC = dict(
     labels=dict(type='dict'),
@@ -64,6 +52,12 @@ def common_arg_spec():
     return argument_spec
 
 
-COMMON_MUTUALLY_EXCLUSIVE = [
+def update_arg_spec():
+    argument_spec = common_arg_spec()
+    argument_spec.update(copy.deepcopy(UPDATE_ARG_SPEC))
+    return argument_spec
+
+
+UPDATE_MUTUALLY_EXCLUSIVE = [
     ('merge_type', 'apply')
 ]

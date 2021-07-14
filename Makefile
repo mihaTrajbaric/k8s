@@ -18,6 +18,7 @@ PYTHON_VERSION ?= `python -c 'import platform; print("{0}.{1}".format(platform.p
 #install: build
 #	ansible-galaxy collection install -p ansible_collections kubernetes-core-${VERSION}.tar.gz
 
+.PHONY: test-sanity
 test-sanity:
 	ansible-test sanity --docker -v --color --python $(PYTHON_VERSION) $(?TEST_ARGS)
 
@@ -29,5 +30,6 @@ integration:  ## Run integration tests
 	pip install -r integration.requirements # -r collection.requirements
 	pytest -s --molecule-base-config=base.yml tests/integration/molecule
 
+.PHONY: test-unit
 test-unit:
 	ansible-test units --docker -v --color --coverage --python $(PYTHON_VERSION) $(?TEST_ARGS)
