@@ -13,7 +13,7 @@ options:
           C(present), an existing object will be patched, if its attributes differ from those specified as module params.
         type: str
         default: present
-        choices: [ absent, patched, present ]
+        choices: [ absent, present ]
     name:
         description:
         - Use to specify an object name.

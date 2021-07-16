@@ -10,7 +10,9 @@ def execute_module(module, resource_definition):
 
     k8s_ansible_mixin.module = module
     k8s_ansible_mixin.module.params['resource_definition'] = resource_definition
-    k8s_ansible_mixin.module.params['validate'] = {}
+    k8s_ansible_mixin.module.params['validate'] = {'fail_on_error': True}
+    if not {'merge_type', 'apply'}.issubset(set(k8s_ansible_mixin.module.params.keys())):
+        k8s_ansible_mixin.module.params['merge_type'] = []
 
     k8s_ansible_mixin.argspec = module.argument_spec
     k8s_ansible_mixin.check_mode = k8s_ansible_mixin.module.check_mode

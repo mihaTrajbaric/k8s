@@ -1,0 +1,139 @@
+---
+- name: Converge
+  collections:
+    - sodalite.k8s
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Minimal example
+      sodalite.k8s.storage_class:
+        name: storage-class-minimal
+        state: present
+        provisioner: kubernetes.io/no-provisioner
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.result.apiVersion == 'storage.k8s.io/v1'
+          - result.result.kind == 'StorageClass'
+          - result.result.metadata.name == 'storage-class-minimal'
+          # - result.result.metadata.namespace == 'default'
+          - result.result.provisioner == 'kubernetes.io/no-provisioner'
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: storage.k8s.io/v1
+        kind: StorageClass
+        name: storage-class-minimal
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 1 }}"
+          - results.resources[0].metadata.name == 'storage-class-minimal'
+
+    - name: Idempotency
+      sodalite.k8s.storage_class:
+        name: storage-class-minimal
+        state: present
+        provisioner: kubernetes.io/no-provisioner
+      register: result
+
+    - assert:
+        that:
+          - result is not changed
+
+    - name: Delete minimal example
+      sodalite.k8s.storage_class:
+        name: storage-class-minimal
+        state: absent
+        provisioner: kubernetes.io/no-provisioner
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'
+
+    - name: Ensure example is really not on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: storage.k8s.io/v1
+        kind: StorageClass
+        name: storage-class-minimal
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 0}}"
+
+    # Not all options are actually valid with provisioner 'kubernetes.io/no-provisioner'
+    # This test just inspects all the fields are passed properly to k8s object
+    - name: Full example
+      sodalite.k8s.storage_class:
+        name: storage-class-full
+        state: present
+        provisioner: kubernetes.io/no-provisioner
+        allow_volume_expansion: yes
+        allowed_topologies:
+          - key: zone
+            values:
+              - zone1
+              - zone2
+        mount_options: ['ro']
+        parameters:
+          my_param: default
+        reclaim_policy: Delete
+        volume_binding_mode: WaitForFirstConsumer
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.result.apiVersion == 'storage.k8s.io/v1'
+          - result.result.kind == 'StorageClass'
+          - result.result.metadata.name == 'storage-class-full'
+          - result.result.provisioner == 'kubernetes.io/no-provisioner'
+          - result.result.allowVolumeExpansion == true
+          - result.result.allowedTopologies[0].matchLabelExpressions[0].key == 'zone'
+          - result.result.allowedTopologies[0].matchLabelExpressions[0]['values'] == [ 'zone1', 'zone2' ]
+          - result.result.mountOptions == ['ro']
+          - result.result.parameters.my_param == 'default'
+          - result.result.reclaimPolicy == 'Delete'
+          - result.result.volumeBindingMode == 'WaitForFirstConsumer'
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: storage.k8s.io/v1
+        kind: StorageClass
+        name: storage-class-full
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 1 }}"
+          - results.resources[0].metadata.name == 'storage-class-full'
+          - results.resources[0].apiVersion == 'storage.k8s.io/v1'
+          - results.resources[0].kind == 'StorageClass'
+          - results.resources[0].metadata.name == 'storage-class-full'
+          - results.resources[0].provisioner == 'kubernetes.io/no-provisioner'
+          - results.resources[0].allowVolumeExpansion == true
+          - results.resources[0].allowedTopologies[0].matchLabelExpressions[0].key == 'zone'
+          - results.resources[0].allowedTopologies[0].matchLabelExpressions[0]['values'] == [ 'zone1', 'zone2' ]
+          - results.resources[0].mountOptions == ['ro']
+          - results.resources[0].parameters.my_param == 'default'
+          - results.resources[0].reclaimPolicy == 'Delete'
+          - results.resources[0].volumeBindingMode == 'WaitForFirstConsumer'
+
+    - name: Delete minimal example
+      sodalite.k8s.storage_class:
+        name: storage-class-full
+        state: absent
+        provisioner: kubernetes.io/no-provisioner
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'

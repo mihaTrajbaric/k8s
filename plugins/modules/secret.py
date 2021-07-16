@@ -17,8 +17,7 @@ version_added: "1.0.0"
 description: Creates k8s Secret, which holds secret data of a certain type.
 
 extends_documentation_fragment:
-    - sodalite.k8s.common_options
-    - sodalite.k8s.update_options
+    - sodalite.k8s.common_update_options
     - sodalite.k8s.metadata_options
     - kubernetes.core.k8s_auth_options
     - kubernetes.core.k8s_wait_options

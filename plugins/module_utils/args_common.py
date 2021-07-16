@@ -9,7 +9,7 @@ __metaclass__ = type
 COMMON_ARG_SPEC = dict(
     state=dict(
         default='present',
-        choices=['present', 'absent', 'patched']
+        choices=['present', 'absent']
     ),
     name=dict(
         type='str',
@@ -22,6 +22,11 @@ COMMON_ARG_SPEC = dict(
 )
 
 UPDATE_ARG_SPEC = dict(
+    # Modules, that support update, also support state='patched'
+    state=dict(
+        default='present',
+        choices=['present', 'patched', 'absent']
+    ),
     force=dict(
         type='bool',
         default=False
