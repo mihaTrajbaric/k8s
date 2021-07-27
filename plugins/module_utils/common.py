@@ -120,7 +120,12 @@ class CommonValidation:
         """
         annotations = k8s_definition['metadata'].get('annotations', dict())
         labels = k8s_definition['metadata'].get('labels', dict())
+        name = k8s_definition['metadata']['name']
         if not Validators.string_string_dict(annotations):
             module.fail_json(msg="Annotations should be map[string]string")
         if not Validators.string_string_dict(labels):
             module.fail_json(msg="Labels should be map[string]string")
+        if not Validators.dns_subdomain(name):
+            module.fail_json(msg="'name' should be a valid lowercase RFC 1123 subdomain. It must consist of lower case "
+                                 "alphanumeric characters, '-' or '.', and must start and end with an "
+                                 "alphanumeric character")

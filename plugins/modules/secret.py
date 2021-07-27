@@ -167,10 +167,6 @@ def validate(module, k8s_definition):
     data_keys_valid = all([Validators.alnum_ext(key) for key in data.keys()])
     string_data_keys_valid = all([Validators.alnum_ext(key) for key in string_data.keys()])
 
-    if not Validators.dns_subdomain(k8s_definition['metadata']['name']):
-        module.fail_json(msg="'name' should be a valid lowercase RFC 1123 subdomain. It must consist of lower case "
-                             "alphanumeric characters, '-' or '.', and must start and end with an "
-                             "alphanumeric character")
     if not data_keys_valid:
         module.fail_json(msg="Keys in data must consist of alphanumeric characters, '-', '_' or '.'")
     if not string_data_keys_valid:

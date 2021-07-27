@@ -233,11 +233,6 @@ def definition(params):
 def validate(module, k8s_definition):
     CommonValidation.metadata(module, k8s_definition)
 
-    if not Validators.dns_subdomain(k8s_definition['metadata']['name']):
-        module.fail_json(msg="'name' should be a valid lowercase RFC 1123 subdomain. It must consist of lower case "
-                             "alphanumeric characters, '-' or '.', and must start and end with an "
-                             "alphanumeric character")
-
     parameters = k8s_definition.get('parameters', dict())
     if not Validators.string_string_dict(parameters):
         module.fail_json(msg="parameters should be map[string]string")
