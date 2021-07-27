@@ -19,7 +19,7 @@ description: Creates k8s Deployment, provides declarative updates for Pods and R
              Deployments.
 
 extends_documentation_fragment:
-    - sodalite.k8s.common_options
+    - sodalite.k8s.common_update_options
     - sodalite.k8s.selector_options
     - sodalite.k8s.metadata_options
     - kubernetes.core.k8s_auth_options
@@ -569,7 +569,7 @@ options:
 author:
     - Mihael Trajbarič (@mihaTrajbaric)
 '''
-
+# TODO examples
 EXAMPLES = r'''
 # Create PersistentVolumeClaim
 - name: Create simple PersistentVolumeClaim
@@ -666,94 +666,190 @@ result:
 '''
 
 from ansible_collections.sodalite.k8s.plugins.module_utils.ansiblemodule import AnsibleModule
-from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import common_arg_spec
+from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import update_arg_spec
 from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators, CommonValidation
 from ansible_collections.sodalite.k8s.plugins.module_utils.helper import clean_dict
 from copy import deepcopy
 
 
 def definition(params):
-    # TODO implement
 
     body = {
-        "apiVersion": "v1",
-        "kind": "PersistentVolumeClaim",
+        "apiVersion": "apps/v1",
+        "kind": "Deployment",
         "metadata": {
             "name": params.get('name'),
             "labels": params.get('labels'),
             "annotations": params.get('annotations')
         },
-        'spec': {
-            'accessModes': params.get('access_modes'),
+        "spec": {
             'selector': {
                 'matchExpressions': (params.get('selector') or {}).get('match_expressions'),
                 'matchLabels': (params.get('selector') or {}).get('match_labels')
             },
-            'resources': {
-                'requests': {
-                    'storage': params.get('storage_request')
+            "template": {
+                "metadata": {
+                    "name": params.get('name'),
+                    "labels": params.get('labels'),
+                    "annotations": params.get('annotations')
                 },
-                'limits': {
-                    'storage': params.get('storage_limit')
+                'spec': {
+                    'containers': [
+                        {
+                            'name': container.get('name'),
+                            'image': container.get('image'),
+                            'imagePullPolicy': container.get('image_pull_policy'),
+                            'command': container.get('command'),
+                            'args': container.get('args'),
+                            'workingDir': container.get('working_dir'),
+                            'ports': [
+                                {
+                                    'containerPort': port.get('container_port'),
+                                    'hostIP': port.get('host_ip'),
+                                    'hostPort': port.get('host_port'),
+                                    'name': port.get('name'),
+                                    'protocol': port.get('protocol'),
+                                }
+                                for port in container.get('ports')
+                            ],
+                            'env': [
+                                {
+                                    'name': env_var.get('name'),
+                                    'valueFrom': {
+                                        'configMapKeyRef': env_var.get('config_map'),
+                                        'secretKeyRef': env_var.get('secret'),
+                                    },
+                                    'value': env_var.get('value')
+                                }
+                                for env_var in container.get('env')
+                            ],
+                            'envFrom': [
+                                {
+                                    'configMapRef': env_from_item.get('config_map'),
+                                    'prefix': env_from_item.get('prefix'),
+                                    'secretRef': env_from_item.get('secret'),
+                                }
+                                for env_from_item in container.get('env_from')
+                            ],
+                            'volumeMounts': [
+                                {
+                                    'mountPath': volume_mount.get('path'),
+                                    'name': volume_mount.get('name'),
+                                    'mountPropagation': volume_mount.get('propagation'),
+                                    'readOnly': volume_mount.get('read_only'),
+                                    'subPath': volume_mount.get('sub_path'),
+                                    'subPathExpr': volume_mount.get('sub_path_expr'),
+                                }
+                                for volume_mount in container.get('volume_mounts')
+                            ],
+                            'volumeDevices': [
+                                {
+                                    'devicePath': volume_device.get('path'),
+                                    'name': volume_device.get('name')
+                                }
+                                for volume_device in container.get('volume_devices')
+                            ],
+                            'resources': {
+                                'limits': container.get('resource_limits'),
+                                'requests': container.get('resource_requests')
+                            }
+                        }
+                        for container in params.get('containers')
+                    ],
+                    'imagePullSecrets': [{'name': secret} for secret in params.get('image_pull_secrets')],
+                    'enableServiceLinks': params.get('enable_service_links'),
+                    'volumes': [
+                        {
+                            'name': volume.get('name'),
+                            'persistentVolumeClaim': {
+                                'claimName': (volume.get('pvc') or {}).get('claim_name'),
+                                'readOnly': (volume.get('pvc') or {}).get('read_only')
+                            },
+                            'configMap': {
+                                'name': (volume.get('config_map') or {}).get('name'),
+                                'optional': (volume.get('config_map') or {}).get('optional'),
+                                'defaultMode': (volume.get('config_map') or {}).get('default_mode'),
+                                'items': (volume.get('config_map') or {}).get('items'),
+                            },
+                            'secret': {
+                                'secretName': (volume.get('secret') or {}).get('name'),
+                                'optional': (volume.get('secret') or {}).get('optional'),
+                                'defaultMode': (volume.get('secret') or {}).get('default_mode'),
+                                'items': (volume.get('secret') or {}).get('items'),
+                            }
+                        }
+                        for volume in params.get('volumes')
+                    ]
                 }
             },
-            'volumeName': params.get('volume_name'),
-            'storageClassName': params.get('storage_class_name'),
-            'volumeMode': params.get('volume_mode')
+            'replicas': params.get('replicas'),
+            'minReadySeconds': params.get('min_ready_seconds'),
+            'strategy': {
+                "type": (params.get('strategy') or {}).get('type'),
+                "rollingUpdate": {
+                    "maxSurge": (params.get('strategy') or {}).get('max_surge'),
+                    "maxUnavailable": (params.get('strategy') or {}).get('max_unavailable'),
+                }
+            },
+            'revisionHistoryLimit': params.get('revision_history_limit'),
+            'progressDeadlineSeconds': params.get('progress_deadline_seconds'),
+            'paused': params.get('paused')
         }
+
     }
     return clean_dict(body)
 
 
 def validate(module, k8s_definition):
     # TODO implement
-    CommonValidation.metadata(module, k8s_definition)
-
-    if not Validators.dns_subdomain(k8s_definition['metadata']['name']):
-        module.fail_json(msg="'name' should be a valid lowercase RFC 1123 subdomain. It must consist of lower case "
-                             "alphanumeric characters, '-' or '.', and must start and end with an "
-                             "alphanumeric character")
-
-    spec_keys = list(k8s_definition['spec'].keys())
-
-    access_modes = k8s_definition['spec'].get('accessModes', list())
-    if not access_modes:
-        module.fail_json(msg="Access_modes should have at least 1 element")
-
-    access_modes_valid = all([item in ('ReadWriteOnce', 'ReadOnlyMany', 'ReadWriteMany') for item in access_modes])
-    if not access_modes_valid:
-        module.fail_json(msg="Elements of access_modes should be chosen from "
-                             "('ReadWriteOnce', 'ReadOnlyMany', 'ReadWriteMany')")
-
-    if 'selector' in spec_keys:
-        match_expressions = k8s_definition['spec']['selector'].get('matchExpressions', list())
-        for expression in match_expressions:
-            valid_keys = ('In', 'NotIn', 'Exists', 'DoesNotExist')
-            operator = expression.get('operator')
-            if operator not in valid_keys:
-                module.fail_json(msg="Every selector.match_expressions.key should be chosen "
-                                     "from {0}".format({', '.join(valid_keys)}))
-            values_condition = (operator in ('In', 'NotIn')) == bool(expression.get('values'))
-            if not values_condition:
-                module.fail_json(msg="If in any selector.match_expressions operator is 'In' or 'NotIn', the values "
-                                     "array must be non-empty. If operator is 'Exists' or 'DoesNotExist', the values "
-                                     "array must be empty.")
-        match_labels = k8s_definition['spec']['selector'].get('matchLabels', dict())
-        if not Validators.string_string_dict(match_labels):
-            module.fail_json(msg="Selector.match_labels should be map[string]string")
-
-    if 'resources' in spec_keys:
-        limits = k8s_definition['spec']['resources'].get('limits', dict())
-        if not Validators.string_quantity_dict(limits):
-            module.fail_json(msg="Storage_limit should be map[string]Quantity")
-
-        requests = k8s_definition['spec']['resources'].get('requests', dict())
-        if not Validators.string_quantity_dict(requests):
-            module.fail_json(msg="Storage_request should be map[string]Quantity")
+    pass
+    # CommonValidation.metadata(module, k8s_definition)
+    #
+    # if not Validators.dns_subdomain(k8s_definition['metadata']['name']):
+    #     module.fail_json(msg="'name' should be a valid lowercase RFC 1123 subdomain. It must consist of lower case "
+    #                          "alphanumeric characters, '-' or '.', and must start and end with an "
+    #                          "alphanumeric character")
+    #
+    # spec_keys = list(k8s_definition['spec'].keys())
+    #
+    # access_modes = k8s_definition['spec'].get('accessModes', list())
+    # if not access_modes:
+    #     module.fail_json(msg="Access_modes should have at least 1 element")
+    #
+    # access_modes_valid = all([item in ('ReadWriteOnce', 'ReadOnlyMany', 'ReadWriteMany') for item in access_modes])
+    # if not access_modes_valid:
+    #     module.fail_json(msg="Elements of access_modes should be chosen from "
+    #                          "('ReadWriteOnce', 'ReadOnlyMany', 'ReadWriteMany')")
+    #
+    # if 'selector' in spec_keys:
+    #     match_expressions = k8s_definition['spec']['selector'].get('matchExpressions', list())
+    #     for expression in match_expressions:
+    #         valid_keys = ('In', 'NotIn', 'Exists', 'DoesNotExist')
+    #         operator = expression.get('operator')
+    #         if operator not in valid_keys:
+    #             module.fail_json(msg="Every selector.match_expressions.key should be chosen "
+    #                                  "from {0}".format({', '.join(valid_keys)}))
+    #         values_condition = (operator in ('In', 'NotIn')) == bool(expression.get('values'))
+    #         if not values_condition:
+    #             module.fail_json(msg="If in any selector.match_expressions operator is 'In' or 'NotIn', the values "
+    #                                  "array must be non-empty. If operator is 'Exists' or 'DoesNotExist', the values "
+    #                                  "array must be empty.")
+    #     match_labels = k8s_definition['spec']['selector'].get('matchLabels', dict())
+    #     if not Validators.string_string_dict(match_labels):
+    #         module.fail_json(msg="Selector.match_labels should be map[string]string")
+    #
+    # if 'resources' in spec_keys:
+    #     limits = k8s_definition['spec']['resources'].get('limits', dict())
+    #     if not Validators.string_quantity_dict(limits):
+    #         module.fail_json(msg="Storage_limit should be map[string]Quantity")
+    #
+    #     requests = k8s_definition['spec']['resources'].get('requests', dict())
+    #     if not Validators.string_quantity_dict(requests):
+    #         module.fail_json(msg="Storage_request should be map[string]Quantity")
 
 
 def main():
-    argspec = common_arg_spec()
+    argspec = update_arg_spec()
     argspec.update(dict(
         selector=dict(type='dict', options=dict(
             match_labels=dict(type='dict'),
@@ -784,23 +880,31 @@ def main():
             )),
             env=dict(type='list', elements='dict', options=dict(
                 # TODO validate C_IDENTIFIER
+
                 name=dict(type='str', required=True),
                 value=dict(type='str'),
                 config_map=dict(type='dict', options=dict(
                     key=dict(type='str', required=True, no_log=False),
+                    # TODO validate lowercase subdomain (name)
                     name=dict(type='str'),
                     optional=dict(type='bool')
                 )),
                 # TODO resources_field_ref, field_ref
+                # TODO this must be validated.
+                #  value, valueFrom.configMapKeyRef and  valueFrom.secretKeyRef are exclusive
                 secret=dict(type='dict', no_log=False, options=dict(
                     key=dict(type='str', required=True, no_log=False),
+                    # TODO validate lowercase subdomain (name)
                     name=dict(type='str'),
                     optional=dict(type='bool')
                 ))
             )),
             env_from=dict(type='list', elements='dict', options=dict(
+                # TODO this must be validate.
+                #  configMapKeyRef and secretKeyRef are mutually exclusive
                 config_map=dict(type='dict', options=dict(
                     # TODO required?
+                    # TODO validate lowercase subdomain (name)
                     name=dict(type='str'),
                     optional=dict(type='bool')
                 )),
@@ -808,6 +912,7 @@ def main():
                 prefix=dict(type='str'),
                 secret=dict(type='dict', no_log=False, options=dict(
                     # TODO required?
+                    # TODO validate lowercase subdomain (name)
                     name=dict(type='str'),
                     optional=dict(type='bool')
                 ))
@@ -819,9 +924,11 @@ def main():
                 propagation=dict(type='str', choices=['None', 'HostToContainer', 'Bidirectional'], default='None'),
                 read_only=dict(type='bool', default=False),
                 # TODO validate mutually exclusive (sub_path, sub_path_expr)
-                sub_path=dict(type='str', default='""'),
-                sub_path_expr=dict(type='str', default='""')
+                sub_path=dict(type='str'),
+                sub_path_expr=dict(type='str')
             )),
+            # TODO validate name matches name in volumes
+            # TODO validate only pvc, not other modes
             volume_devices=dict(type='list', elements='dict', options=dict(
                 # TODO validate must not contain ':'?
                 path=dict(type='str', required=True),
@@ -843,10 +950,12 @@ def main():
             #      terminationMessagePath, terminationMessagePolicy, tty
         )),
         # init_containers=dict(type='list', elements='dict', options=deepcopy({})),
+        # TODO wtf is this?
         image_pull_secrets=dict(type='list', elements='str', no_log=False),
         enable_service_links=dict(type='bool', default=True),
         volumes=dict(type='list', elements='dict', options=dict(
-            # validate DNS_LABEL
+            # TODO validate DNS_LABEL
+            # TODO validate only one type (pvc, config_map, secret)
             name=dict(type='str', required=True),
             pvc=dict(type='dict', options=dict(
                 claim_name=dict(type='str', required=True),
@@ -855,21 +964,21 @@ def main():
             config_map=dict(type='dict', options=dict(
                 name=dict(type='str'),
                 optional=dict(type='bool'),
-                default_mode=dict(type='str', default='0644'),
+                default_mode=dict(type='int', default=0o644),
                 items=dict(type='list', elements='dict', options=dict(
                     key=dict(type='str', required=True, no_log=False),
                     path=dict(type='str', required=True),
-                    mode=dict(type='str')
+                    mode=dict(type='int')
                 ))
             )),
             secret=dict(type='dict', no_log=False, options=dict(
                 name=dict(type='str'),
                 optional=dict(type='bool'),
-                default_mode=dict(type='str', default='0644'),
+                default_mode=dict(type='int', default=0o644),
                 items=dict(type='list', elements='dict', options=dict(
                     key=dict(type='str', required=True, no_log=False),
                     path=dict(type='str', required=True),
-                    mode=dict(type='str')
+                    mode=dict(type='int')
                 ))
             ))
         )),
@@ -898,8 +1007,11 @@ def main():
     from ansible_collections.sodalite.k8s.plugins.module_utils.k8s_connector import execute_module
 
     volume_claim_def = definition(module.params)
-    if module.params.get('state') != 'absent':
-        validate(module, volume_claim_def)
+    # if module.params.get('state') != 'absent':
+    #     validate(module, volume_claim_def)
+
+    # import json
+    # module.exit_json(msg=json.dumps(volume_claim_def, indent=2))
 
     execute_module(module, volume_claim_def)
 
