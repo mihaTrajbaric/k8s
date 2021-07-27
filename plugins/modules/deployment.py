@@ -20,19 +20,65 @@ description: Creates k8s Deployment, provides declarative updates for Pods and R
 
 extends_documentation_fragment:
     - sodalite.k8s.common_update_options
-    - sodalite.k8s.selector_options
     - sodalite.k8s.metadata_options
     - kubernetes.core.k8s_auth_options
     - kubernetes.core.k8s_wait_options
     - kubernetes.core.k8s_delete_options
 
 options:
+    selector:
+        description:
+        - A label query over a set of resources.
+        - The result of C(match_labels) and C(match_expressions) are ANDed.
+        - An empty label selector matches all objects.
+        - A null label selector matches no objects.
+        type: dict
+        required: true
+        suboptions:
+            match_labels:
+                description:
+                - A map of {C(key),C(value)} pairs.
+                - A single {C(key),C(value)} in the I(match_labels) map is equivalent to an element of
+                  I(match_expressions), whose key field is C(key), the operator is C(In), and the values array contains
+                  only C(value).
+                - The requirements are ANDed.
+                type: dict
+            match_expressions:
+                description:
+                - A list of label selector requirements.
+                - The requirements are ANDed.
+                - A label selector requirement is a selector that contains values, a key, and an operator that relates
+                  the key and values.
+                type: list
+                elements: dict
+                suboptions:
+                    key:
+                        description:
+                        - The label key that the selector applies to.
+                        - Patch strategy is merge on I(key=key)
+                        type: str
+                        required: yes
+                    operator:
+                        description:
+                        - Represents a key's relationship to a set of values.
+                        type: str
+                        choices: [In, NotIn, Exists, DoesNotExist]
+                        required: yes
+                    values:
+                        description:
+                        - An array of string values.
+                        - If the I(operator=In) or I(operator=NotIn), the values array must be non-empty.
+                        - If the I(operator=Exists) or I(operator=DoesNotExist), the values array must be empty.
+                        - This array is replaced during a strategic merge patch.
+                        type: list
+                        elements: str
     containers:
         description:
         - List of containers belonging to the pod.
         - There must be at least one container in a Pod.
         type: list
         elements: dict
+        required: true
         suboptions:
             name:
                 description:
@@ -211,6 +257,7 @@ options:
                                 - Name of the referent.
                                 - More info U(https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                 type: str
+                                required: true
                             optional:
                                 description:
                                 - Specify whether the ConfigMap must be defined.
@@ -232,6 +279,7 @@ options:
                                 - Name of the referent.
                                 - More info U(https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names)
                                 type: str
+                                required: true
                             optional:
                                 description:
                                 - Specify whether the Secret must be defined.
@@ -272,7 +320,6 @@ options:
                         - Path within the volume from which the container's volume should be mounted.
                         - "\"\" means volume's root."
                         type: str
-                        default: "\"\""
                     sub_path_expr:
                         description:
                         - Expanded path within the volume from which the container's volume should be mounted.
@@ -281,7 +328,6 @@ options:
                         - "\"\" means volume's root."
                         - I(sub_path_expr) and I(sub_path) are mutually exclusive.
                         type: str
-                        default: "\"\""
             volume_devices:
                 description:
                 - The list of block devices to be used by the container.
@@ -410,8 +456,8 @@ options:
                         - Directories within the path are not affected by this setting.
                         - This might be in conflict with other options that affect the file mode, like fsGroup, and
                           the result can be other mode bits set.
-                        type: str
-                        default: '0644'
+                        type: int
+                        default: 0644
                     items:
                         description:
                         - If unspecified, each key-value pair in the Data field of the referenced ConfigMap will be
@@ -444,7 +490,7 @@ options:
                                 - If not specified, the volume I(default_mode) will be used.
                                 - This might be in conflict with other options that affect the file mode, like fsGroup,
                                   and the result can be other mode bits set.
-                                type: str
+                                type: int
             secret:
                 description:
                 - Adapts a Secret into a volume.
@@ -470,8 +516,8 @@ options:
                         - Directories within the path are not affected by this setting.
                         - This might be in conflict with other options that affect the file mode, like fsGroup, and
                           the result can be other mode bits set.
-                        type: str
-                        default: '0644'
+                        type: int
+                        default: 0644
                     items:
                         description:
                         - If unspecified, each key-value pair in the Data field of the referenced Secret will be
@@ -504,7 +550,7 @@ options:
                                 - If not specified, the volume I(default_mode) will be used.
                                 - This might be in conflict with other options that affect the file mode, like fsGroup,
                                   and the result can be other mode bits set.
-                                type: str
+                                type: int
     replicas:
         description:
         - Number of desired pods.
@@ -532,21 +578,21 @@ options:
             max_surge:
                 description:
                 - Rolling update config param.
+                - Present only if I(type = RollingUpdate)
                 - The maximum number of pods that can be scheduled above the desired number of pods.
                 - Value can be an absolute number (ex. C(5)) or a percentage of desired pods (ex. C(10%)).
                 - This can not be 0 if I(max_unavailable=0).
                 - Absolute number is calculated from percentage by rounding up.
                 type: str
-                default: 25%
             max_unavailable:
                 description:
                 - Rolling update config param.
+                - Present only if I(type = RollingUpdate)
                 - The maximum number of pods that can be unavailable during the update.
                 - Value can be an absolute number (ex. C(5)) or a percentage of desired pods (ex. C(10%)).
                 - Absolute number is calculated from percentage by rounding down.
                 - This can not be 0 if C(max_surge=0).
                 type: str
-                default: 25%
     revision_history_limit:
         description:
         - The number of old ReplicaSets to retain to allow rollback.
@@ -669,11 +715,9 @@ from ansible_collections.sodalite.k8s.plugins.module_utils.ansiblemodule import 
 from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import update_arg_spec
 from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators, CommonValidation
 from ansible_collections.sodalite.k8s.plugins.module_utils.helper import clean_dict
-from copy import deepcopy
 
 
 def definition(params):
-
     body = {
         "apiVersion": "apps/v1",
         "kind": "Deployment",
@@ -710,7 +754,7 @@ def definition(params):
                                     'name': port.get('name'),
                                     'protocol': port.get('protocol'),
                                 }
-                                for port in container.get('ports')
+                                for port in container.get('ports') or list()
                             ],
                             'env': [
                                 {
@@ -721,7 +765,7 @@ def definition(params):
                                     },
                                     'value': env_var.get('value')
                                 }
-                                for env_var in container.get('env')
+                                for env_var in container.get('env') or list()
                             ],
                             'envFrom': [
                                 {
@@ -729,7 +773,7 @@ def definition(params):
                                     'prefix': env_from_item.get('prefix'),
                                     'secretRef': env_from_item.get('secret'),
                                 }
-                                for env_from_item in container.get('env_from')
+                                for env_from_item in container.get('env_from') or list()
                             ],
                             'volumeMounts': [
                                 {
@@ -740,23 +784,23 @@ def definition(params):
                                     'subPath': volume_mount.get('sub_path'),
                                     'subPathExpr': volume_mount.get('sub_path_expr'),
                                 }
-                                for volume_mount in container.get('volume_mounts')
+                                for volume_mount in container.get('volume_mounts') or list()
                             ],
                             'volumeDevices': [
                                 {
                                     'devicePath': volume_device.get('path'),
                                     'name': volume_device.get('name')
                                 }
-                                for volume_device in container.get('volume_devices')
+                                for volume_device in container.get('volume_devices') or list()
                             ],
                             'resources': {
                                 'limits': container.get('resource_limits'),
                                 'requests': container.get('resource_requests')
                             }
                         }
-                        for container in params.get('containers')
+                        for container in params.get('containers') or list()
                     ],
-                    'imagePullSecrets': [{'name': secret} for secret in params.get('image_pull_secrets')],
+                    'imagePullSecrets': [{'name': secret} for secret in params.get('image_pull_secrets') or list()],
                     'enableServiceLinks': params.get('enable_service_links'),
                     'volumes': [
                         {
@@ -778,7 +822,7 @@ def definition(params):
                                 'items': (volume.get('secret') or {}).get('items'),
                             }
                         }
-                        for volume in params.get('volumes')
+                        for volume in params.get('volumes') or list()
                     ]
                 }
             },
@@ -801,52 +845,133 @@ def definition(params):
 
 
 def validate(module, k8s_definition):
-    # TODO implement
 
     CommonValidation.metadata(module, k8s_definition)
-    #
-    # spec_keys = list(k8s_definition['spec'].keys())
-    #
-    # access_modes = k8s_definition['spec'].get('accessModes', list())
-    # if not access_modes:
-    #     module.fail_json(msg="Access_modes should have at least 1 element")
-    #
-    # access_modes_valid = all([item in ('ReadWriteOnce', 'ReadOnlyMany', 'ReadWriteMany') for item in access_modes])
-    # if not access_modes_valid:
-    #     module.fail_json(msg="Elements of access_modes should be chosen from "
-    #                          "('ReadWriteOnce', 'ReadOnlyMany', 'ReadWriteMany')")
-    #
-    # if 'selector' in spec_keys:
-    #     match_expressions = k8s_definition['spec']['selector'].get('matchExpressions', list())
-    #     for expression in match_expressions:
-    #         valid_keys = ('In', 'NotIn', 'Exists', 'DoesNotExist')
-    #         operator = expression.get('operator')
-    #         if operator not in valid_keys:
-    #             module.fail_json(msg="Every selector.match_expressions.key should be chosen "
-    #                                  "from {0}".format({', '.join(valid_keys)}))
-    #         values_condition = (operator in ('In', 'NotIn')) == bool(expression.get('values'))
-    #         if not values_condition:
-    #             module.fail_json(msg="If in any selector.match_expressions operator is 'In' or 'NotIn', the values "
-    #                                  "array must be non-empty. If operator is 'Exists' or 'DoesNotExist', the values "
-    #                                  "array must be empty.")
-    #     match_labels = k8s_definition['spec']['selector'].get('matchLabels', dict())
-    #     if not Validators.string_string_dict(match_labels):
-    #         module.fail_json(msg="Selector.match_labels should be map[string]string")
-    #
-    # if 'resources' in spec_keys:
-    #     limits = k8s_definition['spec']['resources'].get('limits', dict())
-    #     if not Validators.string_quantity_dict(limits):
-    #         module.fail_json(msg="Storage_limit should be map[string]Quantity")
-    #
-    #     requests = k8s_definition['spec']['resources'].get('requests', dict())
-    #     if not Validators.string_quantity_dict(requests):
-    #         module.fail_json(msg="Storage_request should be map[string]Quantity")
+    CommonValidation.selector(module, k8s_definition)
+
+    strategy = k8s_definition.get('spec').get('strategy')
+    if strategy and strategy['type'] == 'Recreate' and 'rollingUpdate' in strategy.keys():
+        module.fail_json(msg="strategy.max_surge and strategy.max_unavailable can only be present "
+                             "if strategy.type==RollingUpdate")
+
+    pod_definition = k8s_definition['spec']['template']
+    CommonValidation.selector(module, pod_definition)
+
+    # to verify unique port names
+    port_names = list()
+
+    if len(pod_definition['spec'].get('containers', list())) < 1:
+        module.fail_json(msg="There must be at least one container in a Pod.")
+
+    for i, container in enumerate(pod_definition['spec']['containers']):
+        if not Validators.dns_label(container['name']):
+            module.fail_json(msg=f"containers[{i}].name {Validators.dns_label_msg}")
+
+        if 'image' not in container.keys():
+            module.fail_json(msg=f"containers[{i}].image is missing")
+
+        for j, port in enumerate(container.get('ports', list())):
+            if not Validators.port(port.get('containerPort')):
+                module.fail_json(msg=f"containers[{i}].ports[{j}].containerPort {Validators.port_msg}")
+            if not Validators.port(port.get('hostPort')):
+                module.fail_json(msg=f"containers[{i}].ports[{j}].hostPort {Validators.port_msg}")
+            name = port.get('name')
+            if not Validators.iana_svc_name(name):
+                module.fail_json(msg=f"containers[{i}].ports[{j}].name {Validators.iana_svc_name_msg}")
+            if name in port_names:
+                module.fail_json(msg=f"Duplicate port name found (containers[{i}].ports[{j}].name)."
+                                     f" Each named port in a pod must have a unique name")
+            if name:
+                port_names.append(name)
+
+        for j, env_var in enumerate(container.get('env', list())):
+            if not Validators.c_identifier(env_var.get('name')):
+                module.fail_json(msg=f"containers[{i}].env[{j}].name {Validators.c_identifier_msg}")
+            modes = [
+                'value' in env_var,
+                'configMapKeyRef' in env_var.get('valueFrom', {}),
+                'secretKeyRef' in env_var.get('valueFrom', {})
+            ]
+            if sum(modes) != 1:
+                module.fail_json(msg=f"More then one value source in containers[{i}].env[{j}]. "
+                                     f"Only one of (value, config_map, secret) can be present.")
+
+            if not Validators.dns_subdomain(env_var.get('valueFrom', {}).get('configMapKeyRef', {}).get('name')):
+                module.fail_json(msg=f"containers[{i}].env[{j}].config_map.name {Validators.dns_subdomain_msg}")
+
+            if not Validators.dns_subdomain(env_var.get('valueFrom', {}).get('secretKeyRef', {}).get('name')):
+                module.fail_json(msg=f"containers[{i}].env[{j}].secret.name {Validators.dns_subdomain_msg}")
+
+        for j, env_from_item in enumerate(container.get('envFrom', list())):
+            modes = [
+                'configMapRef' in env_from_item,
+                'secretRef' in env_from_item
+            ]
+            if sum(modes) != 1:
+                module.fail_json(msg=f"More then one value source in containers[{i}].env_from[{j}]. "
+                                     f"Only one of (config_map, secret) can be present.")
+
+            if not Validators.dns_subdomain(env_from_item.get('configMapRef', {}).get('name')):
+                module.fail_json(msg=f"containers[{i}].env_from[{j}].config_map.name {Validators.dns_subdomain_msg}")
+
+            if not Validators.dns_subdomain(env_from_item.get('secretRef', {}).get('name')):
+                module.fail_json(msg=f"containers[{i}].env_from[{j}].secret.name {Validators.dns_subdomain_msg}")
+
+            if not Validators.c_identifier(env_from_item.get('prefix')):
+                module.fail_json(msg=f"containers[{i}].env_from[{j}].prefix {Validators.c_identifier_msg}")
+
+        # dict of <volume_name>: <volume_type>
+        volumes = pod_definition['spec'].get('volumes') or list()
+        volume_dict = {volume['name']: next(iter((volume.keys() - {'name'})))
+                       for volume in volumes}
+        for j, volume_mount in enumerate(container.get('volumeMounts', list())):
+            if volume_mount.get('name') not in volume_dict.keys():
+                module.fail_json(msg=f"containers[{i}].volume_mounts[{j}].name not found. Every name should match the "
+                                     f"Name of a Volume.")
+            if ':' in volume_mount.get('mountPath'):
+                module.fail_json(msg=f"containers[{i}].volume_mounts[{j}].path should not contain ':'")
+
+            sub_path_mutually_exclusive_violation = sum(['subPath' in volume_mount, 'subPathExpr' in volume_mount]) != 1
+            if sub_path_mutually_exclusive_violation:
+                module.fail_json(msg=f"sub_path and sub_path_expr in containers[{i}].volume_mounts[{j}] are mutually"
+                                     f" exclusive")
+
+        for j, volume_device in enumerate(container.get('volumeDevices', list())):
+            name = volume_device.get('name')
+            if name not in volume_dict.keys():
+                module.fail_json(msg=f"containers[{i}].volume_devices[{j}].name not found. Every name should match the "
+                                     f"Name of a Volume.")
+            if volume_dict[name] != 'persistentVolumeClaim':
+                module.fail_json(msg=f"containers[{i}].volume_devices[{j}].name should match the name of a "
+                                     f"persistentVolumeClaim (pvc) in the pod")
+
+            if ':' in volume_device.get('devicePath'):
+                module.fail_json(msg=f"containers[{i}].volume_devices[{j}].path should not contain ':'")
+
+        if not Validators.string_quantity_dict((container.get('resources') or {}).get('limits')):
+            module.fail_json(msg="resource_limits.cpu and resource_limits.memory should be Quantities")
+
+        if not Validators.string_quantity_dict((container.get('resources') or {}).get('requests')):
+            module.fail_json(msg="resource_requests.cpu and resource_requests.memory should be Quantities")
+
+    for i, volume in enumerate(pod_definition['spec'].get('volumes') or list()):
+        if not Validators.dns_label(volume['name']):
+            module.fail_json(msg=f"volumes[{i}].name {Validators.dns_label_msg}")
+
+        modes = [
+            'persistentVolumeClaim' in volume,
+            'configMap' in volume,
+            'secret' in volume
+        ]
+        if sum(modes) != 1:
+            module.fail_json(msg=f"More then one VolumeSource in volumes[{i}]. "
+                                 f"Only one of (pvc, config_map, secret) can be present.")
 
 
 def main():
     argspec = update_arg_spec()
     argspec.update(dict(
-        selector=dict(type='dict', options=dict(
+        selector=dict(type='dict', required=True, options=dict(
             match_labels=dict(type='dict'),
             match_expressions=dict(type='list', elements='dict', options=dict(
                 key=dict(type='str', required=True, no_log=False),
@@ -854,89 +979,65 @@ def main():
                 values=dict(type='list', elements='str')
             ))
         )),
-        # TODO container, init_container spec
-        containers=dict(type='list', elements='dict', options=dict(
-            # TODO validate DNS for name
+        # TODO init_container spec
+        containers=dict(type='list', required=True, elements='dict', options=dict(
             name=dict(type='str', required=True),
             image=dict(type='str'),
-            # TODO Defaults to Always if :latest tag is specified, or IfNotPresent otherwise
             image_pull_policy=dict(type='str', choices=['Always', 'Never', 'IfNotPresent']),
             command=dict(type='list', elements='str'),
             args=dict(type='list', elements='str'),
             working_dir=dict(type='str', aliases=['workdir']),
             ports=dict(type='list', elements='dict', options=dict(
-                # TODO validate all ports (0 < x < 65536)
                 container_port=dict(type='int', required=True),
                 host_ip=dict(type='str'),
                 host_port=dict(type='int'),
-                # TODO IANA_SVC_NAME, unique inside pod
                 name=dict(type='str'),
                 protocol=dict(type='str', choices=['UDP', 'TCP', 'SCTP'], default='TCP')
             )),
             env=dict(type='list', elements='dict', options=dict(
-                # TODO validate C_IDENTIFIER
-
                 name=dict(type='str', required=True),
                 value=dict(type='str'),
                 config_map=dict(type='dict', options=dict(
                     key=dict(type='str', required=True, no_log=False),
-                    # TODO validate lowercase subdomain (name)
                     name=dict(type='str'),
                     optional=dict(type='bool')
                 )),
                 # TODO resources_field_ref, field_ref
-                # TODO this must be validated.
-                #  value, valueFrom.configMapKeyRef and  valueFrom.secretKeyRef are exclusive
                 secret=dict(type='dict', no_log=False, options=dict(
                     key=dict(type='str', required=True, no_log=False),
-                    # TODO validate lowercase subdomain (name)
                     name=dict(type='str'),
                     optional=dict(type='bool')
                 ))
             )),
             env_from=dict(type='list', elements='dict', options=dict(
-                # TODO this must be validate.
-                #  configMapKeyRef and secretKeyRef are mutually exclusive
                 config_map=dict(type='dict', options=dict(
-                    # TODO required?
-                    # TODO validate lowercase subdomain (name)
-                    name=dict(type='str'),
+                    name=dict(type='str', required=True),
                     optional=dict(type='bool')
                 )),
-                # TODO validate C_IDENTIFIER
                 prefix=dict(type='str'),
                 secret=dict(type='dict', no_log=False, options=dict(
-                    # TODO required?
-                    # TODO validate lowercase subdomain (name)
-                    name=dict(type='str'),
+                    name=dict(type='str', required=True),
                     optional=dict(type='bool')
                 ))
             )),
             volume_mounts=dict(type='list', elements='dict', options=dict(
-                # TODO validate must not contain ':'
                 path=dict(type='str', required=True),
                 name=dict(type='str', required=True),
                 propagation=dict(type='str', choices=['None', 'HostToContainer', 'Bidirectional'], default='None'),
                 read_only=dict(type='bool', default=False),
-                # TODO validate mutually exclusive (sub_path, sub_path_expr)
                 sub_path=dict(type='str'),
                 sub_path_expr=dict(type='str')
             )),
-            # TODO validate name matches name in volumes
-            # TODO validate only pvc, not other modes
             volume_devices=dict(type='list', elements='dict', options=dict(
-                # TODO validate must not contain ':'?
                 path=dict(type='str', required=True),
                 name=dict(type='str', required=True)
             )),
             resource_limits=dict(type='dict', options=dict(
-                # TODO validate quantity
                 cpu=dict(type='str'),
                 memory=dict(type='str')
                 # TODO could also add hugepages
             )),
             resource_requests=dict(type='dict', options=dict(
-                # TODO validate quantity
                 cpu=dict(type='str'),
                 memory=dict(type='str')
                 # TODO could also add hugepages
@@ -944,13 +1045,9 @@ def main():
             # TODO add lifecycle, livenessProbe, readinessProbe, startupProbe, securityContext, stdin, stdinOnce,
             #      terminationMessagePath, terminationMessagePolicy, tty
         )),
-        # init_containers=dict(type='list', elements='dict', options=deepcopy({})),
-        # TODO wtf is this?
         image_pull_secrets=dict(type='list', elements='str', no_log=False),
         enable_service_links=dict(type='bool', default=True),
         volumes=dict(type='list', elements='dict', options=dict(
-            # TODO validate DNS_LABEL
-            # TODO validate only one type (pvc, config_map, secret)
             name=dict(type='str', required=True),
             pvc=dict(type='dict', options=dict(
                 claim_name=dict(type='str', required=True),
@@ -984,29 +1081,25 @@ def main():
         min_ready_seconds=dict(type='int', default=0),
         strategy=dict(type='dict', options=dict(
             type=dict(type='str', choices=['Recreate', 'RollingUpdate'], default='RollingUpdate'),
-            # TODO params required if RollingUpdate
-            max_surge=dict(type='str', default='25%'),
-            max_unavailable=dict(type='str', default='25%')
+            max_surge=dict(type='str'),
+            max_unavailable=dict(type='str')
         )),
         revision_history_limit=dict(type='int', default=10),
         progress_deadline_seconds=dict(type='int', default=600),
         paused=dict(type='bool', default=False),
     ))
-    # required_if = [
-    #     ('state', 'present', ('access_modes', 'storage_request'))
-    # ]
+    required_if = [
+        ('state', 'present', ('labels',))
+    ]
 
     module = AnsibleModule(argument_spec=argspec,
-                           # required_if=required_if,
+                           required_if=required_if,
                            supports_check_mode=True)
     from ansible_collections.sodalite.k8s.plugins.module_utils.k8s_connector import execute_module
 
     volume_claim_def = definition(module.params)
-    # if module.params.get('state') != 'absent':
-    #     validate(module, volume_claim_def)
-
-    # import json
-    # module.exit_json(msg=json.dumps(volume_claim_def, indent=2))
+    if module.params.get('state') != 'absent':
+        validate(module, volume_claim_def)
 
     execute_module(module, volume_claim_def)
 

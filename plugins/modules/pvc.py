@@ -249,8 +249,7 @@ def definition(params):
 
 def validate(module, k8s_definition):
     CommonValidation.metadata(module, k8s_definition)
-
-    spec_keys = list(k8s_definition['spec'].keys())
+    CommonValidation.selector(module, k8s_definition)
 
     access_modes = k8s_definition['spec'].get('accessModes', list())
     if not access_modes:
@@ -261,24 +260,7 @@ def validate(module, k8s_definition):
         module.fail_json(msg="Elements of access_modes should be chosen from "
                              "('ReadWriteOnce', 'ReadOnlyMany', 'ReadWriteMany')")
 
-    if 'selector' in spec_keys:
-        match_expressions = k8s_definition['spec']['selector'].get('matchExpressions', list())
-        for expression in match_expressions:
-            valid_keys = ('In', 'NotIn', 'Exists', 'DoesNotExist')
-            operator = expression.get('operator')
-            if operator not in valid_keys:
-                module.fail_json(msg="Every selector.match_expressions.key should be chosen "
-                                     "from {0}".format({', '.join(valid_keys)}))
-            values_condition = (operator in ('In', 'NotIn')) == bool(expression.get('values'))
-            if not values_condition:
-                module.fail_json(msg="If in any selector.match_expressions operator is 'In' or 'NotIn', the values "
-                                     "array must be non-empty. If operator is 'Exists' or 'DoesNotExist', the values "
-                                     "array must be empty.")
-        match_labels = k8s_definition['spec']['selector'].get('matchLabels', dict())
-        if not Validators.string_string_dict(match_labels):
-            module.fail_json(msg="Selector.match_labels should be map[string]string")
-
-    if 'resources' in spec_keys:
+    if 'resources' in k8s_definition['spec'].keys():
         limits = k8s_definition['spec']['resources'].get('limits', dict())
         if not Validators.string_quantity_dict(limits):
             module.fail_json(msg="Storage_limit should be map[string]Quantity")
