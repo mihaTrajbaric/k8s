@@ -262,11 +262,11 @@ def main():
                            supports_check_mode=True)
     from ansible_collections.sodalite.k8s.plugins.module_utils.k8s_connector import execute_module
 
-    storage_class_def = definition(module.params)
+    k8s_def = definition(module.params)
     if module.params.get('state') != 'absent':
-        validate(module, storage_class_def)
+        validate(module, k8s_def)
 
-    execute_module(module, storage_class_def)
+    execute_module(module, k8s_def)
 
 
 if __name__ == '__main__':

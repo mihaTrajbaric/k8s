@@ -186,11 +186,11 @@ def main():
     module = AnsibleModule(argument_spec=argspec, mutually_exclusive=UPDATE_MUTUALLY_EXCLUSIVE, supports_check_mode=True)
     from ansible_collections.sodalite.k8s.plugins.module_utils.k8s_connector import execute_module
 
-    configmap_def = definition(module.params)
+    k8s_def = definition(module.params)
     if module.params.get('state') != 'absent':
-        validate(module, configmap_def)
+        validate(module, k8s_def)
 
-    execute_module(module, configmap_def)
+    execute_module(module, k8s_def)
 
 
 if __name__ == '__main__':

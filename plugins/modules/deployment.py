@@ -612,6 +612,12 @@ options:
         - Indicates that the deployment is paused.
         type: bool
         default: false
+
+seealso:
+- name: K8s Deployment documentation
+  description: Complete deployment documentation on kubernetes website
+  link: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+
 author:
     - Mihael Trajbarič (@mihaTrajbaric)
 '''
@@ -631,7 +637,7 @@ EXAMPLES = r'''
     containers:
       - name: getting-started-container
         image: docker/getting-started
-        
+
 # Customize command, args, workdir
 - name: Minimal example
   sodalite.k8s.deployment:
@@ -649,7 +655,7 @@ EXAMPLES = r'''
         workdir: /app
         command: ["node"]
         args: ["src/index.js"]
-        
+
 # Open ports
 - name: Minimal example with ports
   sodalite.k8s.deployment:
@@ -672,7 +678,7 @@ EXAMPLES = r'''
             host_port: 5432
             container_port: 5432
             protocol: UDP
-            
+
 # Add environment #1
 - name: Minimal example with environment
   sodalite.k8s.deployment:
@@ -769,7 +775,7 @@ EXAMPLES = r'''
             - key: DB_info
               path: volume/db_info_2.json
               mode: 0644
-              
+
 # Resource limits and requests
 - name: Minimal example with limits and requests
   sodalite.k8s.deployment:
@@ -789,7 +795,7 @@ EXAMPLES = r'''
         resource_requests:
           cpu: 0.1
           memory: 2Gi
-          
+
 # k8s options
 - name: Minimal example with k8s options
   sodalite.k8s.deployment:
@@ -1254,11 +1260,11 @@ def main():
                            supports_check_mode=True)
     from ansible_collections.sodalite.k8s.plugins.module_utils.k8s_connector import execute_module
 
-    volume_claim_def = definition(module.params)
+    k8s_def = definition(module.params)
     if module.params.get('state') != 'absent':
-        validate(module, volume_claim_def)
+        validate(module, k8s_def)
 
-    execute_module(module, volume_claim_def)
+    execute_module(module, k8s_def)
 
 
 if __name__ == '__main__':
