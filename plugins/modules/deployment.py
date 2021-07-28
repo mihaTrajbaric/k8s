@@ -615,62 +615,219 @@ options:
 author:
     - Mihael Trajbarič (@mihaTrajbaric)
 '''
-# TODO examples
+
 EXAMPLES = r'''
-# Create PersistentVolumeClaim
-- name: Create simple PersistentVolumeClaim
-  sodalite.k8s.pvc:
-    name: pvc-test
+# Create getting-started deployment
+- name: Minimal example
+  sodalite.k8s.deployment:
+    name: getting-started
     state: present
-    access_modes:
-        - ReadWriteMany
-        - ReadWriteOnce
-    storage_request: 5Gi
-
-# Create PersistentVolumeClaim with match_expressions
-- name: PersistentVolumeClaim with matchExpressions selector
-  sodalite.k8s.pvc:
-    name: pvc-test
-    state: present
+    labels:
+      app: getting-started
     selector:
-        match_expressions:
-          - key: app-volume
-            operator: In
-            values: [postgres, mysql]
-    access_modes:
-        - ReadWriteMany
-        - ReadWriteOnce
-    storage_request: 5Gi
-
-# Create PersistentVolumeClaim with match_labels
-- name: PersistentVolumeClaim with matchLabels selector
-  sodalite.k8s.pvc:
-    name: pvc-test
+      match_labels:
+        app: getting-started
+    replicas: 1
+    containers:
+      - name: getting-started-container
+        image: docker/getting-started
+        
+# Customize command, args, workdir
+- name: Minimal example
+  sodalite.k8s.deployment:
+    name: getting-started
     state: present
+    labels:
+      app: getting-started
     selector:
-        match_labels:
-          app-volume: postgres
-    access_modes:
-        - ReadWriteMany
-        - ReadWriteOnce
-    storage_request: 5Gi
-
-# Create PersistentVolumeClaim with ResourceRequirements
-- name: PersistentVolumeClaim with storage_request and storage_limit
-  sodalite.k8s.pvc:
-    name: pvc-test
+      match_labels:
+        app: getting-started
+    containers:
+      - name: getting-started-container
+        image: docker/getting-started
+        image_pull_policy: Always
+        workdir: /app
+        command: ["node"]
+        args: ["src/index.js"]
+        
+# Open ports
+- name: Minimal example with ports
+  sodalite.k8s.deployment:
+    name: getting-started
     state: present
-    access_modes:
-        - ReadWriteMany
-        - ReadWriteOnce
-    storage_request: 5Gi
-    storage_limit: 10Gi
+    labels:
+      app: getting-started
+    selector:
+      match_labels:
+        app: getting-started
+    containers:
+      - name: getting-started-container
+        image: docker/getting-started
+        ports:
+          - name: http-port
+            host_port: 80
+            container_port: 80
+            protocol: TCP
+          - name: another-port
+            host_port: 5432
+            container_port: 5432
+            protocol: UDP
+            
+# Add environment #1
+- name: Minimal example with environment
+  sodalite.k8s.deployment:
+    name: getting-started
+    state: present
+    labels:
+      app: getting-started
+    selector:
+      match_labels:
+        app: getting-started
+    containers:
+      - name: getting-started-container
+        image: docker/getting-started
+        env:
+          - name: DB_PORT
+            value: 5432
+          - name: DB_PORT_2
+            config_map:
+              name: postgres-db-config
+              key: PORT
+          - name: DB_PASSWORD
+            secret:
+              name: postgres-db-secret
+              key: PASSWORD
 
-# Remove PersistentVolumeClaim
-- name: Remove pvc
-  sodalite.k8s.pvc:
-    name: pvc-test
+# Add environment #2
+- name: Minimal example with env_from
+  sodalite.k8s.deployment:
+    name: getting-started
+    state: present
+    labels:
+      app: getting-started
+    selector:
+      match_labels:
+        app: getting-started
+    containers:
+      - name: getting-started-container
+        image: docker/getting-started
+        env_from:
+          - config_map:
+              name: postgres-db-config
+            prefix: DB_1_
+          - secret:
+              name: db_2_secret
+            prefix: DB_2_
+
+# Volumes
+- name: Minimal example
+  sodalite.k8s.deployment:
+    name: getting-started
+    state: present
+    labels:
+      app: getting-started
+    selector:
+      match_labels:
+        app: getting-started
+    containers:
+      - name: getting-started-container
+        image: docker/getting-started
+        volume_mounts:
+          - name: my-volume
+            path: /home/test_volume
+            propagation: HostToContainer
+            read_only: no
+            sub_path: foo/bar/
+          - name: my-volume-2
+            path: /home/test_volume_2
+            propagation: HostToContainer
+            read_only: no
+            sub_path_expr: foo/bar/$(VAR_NAME)
+        volume_devices:
+          - name: my-volume-device
+            path: /home/volume_device
+    volumes:
+      - name: my-volume-device
+        pvc:
+          claim_name: my_persistent_volume_claim
+          read_only: yes
+      - name: my-volume
+        config_map:
+          name: config_map_for_volume
+          optional: true
+          default_mode: 0644
+          items:
+            - key: DB_info
+              path: volume/db_info.json
+              mode: 0644
+      - name: my-volume-2
+        secret:
+          name: secret_for_volume
+          optional: true
+          default_mode: 0644
+          items:
+            - key: DB_info
+              path: volume/db_info_2.json
+              mode: 0644
+              
+# Resource limits and requests
+- name: Minimal example with limits and requests
+  sodalite.k8s.deployment:
+    name: getting-started
+    state: present
+    labels:
+      app: getting-started
+    selector:
+      match_labels:
+        app: getting-started
+    containers:
+      - name: getting-started-container
+        image: docker/getting-started
+        resource_limits:
+          cpu: 1
+          memory: 4Gi
+        resource_requests:
+          cpu: 0.1
+          memory: 2Gi
+          
+# k8s options
+- name: Minimal example with k8s options
+  sodalite.k8s.deployment:
+    name: getting-started
+    state: present
+    labels:
+      app: getting-started
+    selector:
+      match_labels:
+        app: getting-started
+    containers:
+      - name: getting-started-container
+        image: docker/getting-started
+    # only DockerConfig type secrets are honored
+    image_pull_secrets:
+        - myregistrykey
+    # enabled by default
+    enable_service_links: no
+    replicas: 3
+    min_ready_seconds: 30
+    strategy:
+        type: RollingUpdate
+        max_surge: 30%
+        max_unavailable: 30%
+    revision_history_limit: 7
+    progress_deadline_seconds: 800
+    paused: false
+
+# Remove Deployment
+- name: Remove deployment
+  sodalite.k8s.deployment:
+    name: getting-started
     state: absent
+    selector:
+      match_labels:
+        app: getting-started
+    containers:
+      - name: getting-started-container
 '''
 
 RETURN = r'''
@@ -712,7 +869,8 @@ result:
 '''
 
 from ansible_collections.sodalite.k8s.plugins.module_utils.ansiblemodule import AnsibleModule
-from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import update_arg_spec
+from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (update_arg_spec,
+                                                                               UPDATE_MUTUALLY_EXCLUSIVE)
 from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators, CommonValidation
 from ansible_collections.sodalite.k8s.plugins.module_utils.helper import clean_dict
 
@@ -931,7 +1089,7 @@ def validate(module, k8s_definition):
             if ':' in volume_mount.get('mountPath'):
                 module.fail_json(msg=f"containers[{i}].volume_mounts[{j}].path should not contain ':'")
 
-            sub_path_mutually_exclusive_violation = sum(['subPath' in volume_mount, 'subPathExpr' in volume_mount]) != 1
+            sub_path_mutually_exclusive_violation = sum(['subPath' in volume_mount, 'subPathExpr' in volume_mount]) > 1
             if sub_path_mutually_exclusive_violation:
                 module.fail_json(msg=f"sub_path and sub_path_expr in containers[{i}].volume_mounts[{j}] are mutually"
                                      f" exclusive")
@@ -1074,9 +1232,7 @@ def main():
                 ))
             ))
         )),
-        # TODO anything else
-        # TODO lifecycle params
-        # TODO maybe scheduling
+        # TODO lifecycle, scheduling
         replicas=dict(type='int', default=1),
         min_ready_seconds=dict(type='int', default=0),
         strategy=dict(type='dict', options=dict(
@@ -1094,6 +1250,7 @@ def main():
 
     module = AnsibleModule(argument_spec=argspec,
                            required_if=required_if,
+                           mutually_exclusive=UPDATE_MUTUALLY_EXCLUSIVE,
                            supports_check_mode=True)
     from ansible_collections.sodalite.k8s.plugins.module_utils.k8s_connector import execute_module
 

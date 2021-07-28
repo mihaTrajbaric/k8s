@@ -1,0 +1,323 @@
+---
+- name: Converge
+  collections:
+    - sodalite.k8s
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Minimal example with wait (can take 30s)
+      sodalite.k8s.deployment:
+        name: getting-started
+        state: present
+        wait: yes
+        labels:
+          app: getting-started
+        selector:
+          match_labels:
+            app: getting-started
+        containers:
+          - name: getting-started-container
+            image: docker/getting-started
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.failed == false
+          - result.result.apiVersion == 'apps/v1'
+          - result.result.kind == 'Deployment'
+          - result.result.metadata.name == 'getting-started'
+          - result.result.metadata.namespace == 'default'
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: getting-started
+        namespace: default
+      register: result
+
+    - assert:
+        that:
+          - "{{ result.resources | length == 1 }}"
+          - result.resources[0].metadata.name == 'getting-started'
+          - result.resources[0].status.readyReplicas == 1
+
+    - name: Idempotency
+      sodalite.k8s.deployment:
+        name: getting-started
+        state: present
+        labels:
+          app: getting-started
+        selector:
+          match_labels:
+            app: getting-started
+        containers:
+          - name: getting-started-container
+            image: docker/getting-started
+      register: result
+
+    - assert:
+        that:
+          - result is not changed
+
+    - name: Delete minimal example
+      sodalite.k8s.deployment:
+        name: getting-started
+        state: absent
+        labels:
+          app: getting-started
+        selector:
+          match_labels:
+            app: getting-started
+        containers:
+          - name: getting-started-container
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'
+
+    - name: Ensure example is really not on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: getting-started
+        namespace: default
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 0}}"
+
+    # Deployment will not actually start, none od dependencies (pvc, config_maps, secrets) exist.
+    # This test just inspects all the fields are passed properly to k8s object.
+    - name: Full example
+      sodalite.k8s.deployment:
+        name: deployment-full
+        state: present
+        labels:
+          app: test
+        selector:
+          match_labels:
+            app: test
+          match_expressions:
+            - key: app
+              operator: In
+              values: [test, test1, test2]
+        containers:
+          - name: test-container
+            image: docker/getting-started
+            image_pull_policy: Always
+            command: ['python3']
+            args: ['test.py', 'foo', 'bar']
+            working_dir: /home/test
+            ports:
+              - name: first-port
+                host_ip: localhost
+                host_port: 42
+                container_port: 80
+                protocol: UDP
+              - name: second-port
+                host_ip: localhost
+                host_port: 43
+                container_port: 81
+                protocol: TCP
+            env:
+              - name: ENV_VAR_1
+                value: foo
+              - name: ENV_VAR_2
+                config_map:
+                  name: my-config-map
+                  key: config_map_field
+              - name: ENV_VAR_3
+                secret:
+                  name: my-secret
+                  key: secret_field
+            env_from:
+              - config_map:
+                  name: config-map-2
+                  optional: yes
+                prefix: FROM_PREFIX
+              - secret:
+                  name: secret-2
+                prefix: FROM_PREFIX
+            volume_mounts:
+              - name: my-volume
+                path: /home/test_volume
+                propagation: HostToContainer
+                read_only: no
+                sub_path: foo/bar/
+                # sub_path_expr: foo/bar/$(VAR_NAME)
+            volume_devices:
+              - name: my-volume-device
+                path: /home/volume_device
+            resource_limits:
+              cpu: 2
+              memory: 4Gi
+            resource_requests:
+              cpu: 1
+              memory: 2Gi
+        image_pull_secrets: [ 'a', 'b' ]
+        enable_service_links: yes
+        volumes:
+          - name: my-volume-device
+            pvc:
+              claim_name: my_volume_claim
+              read_only: yes
+
+          - name: my-volume
+            config_map:
+              name: config_map_for_volume
+              optional: true
+              default_mode: 0644
+              items:
+                - key: DB_info
+                  path: volume/db_info.json
+                  mode: 0644
+          - name: third-volume
+            secret:
+              name: secret_for_volume
+              optional: true
+              default_mode: 0644
+              items:
+                - key: DB_info
+                  path: volume/db_info_2.json
+                  mode: 0644
+        replicas: 3
+        min_ready_seconds: 30
+        strategy:
+          type: RollingUpdate
+          max_surge: 50%
+          max_unavailable: 50%
+        revision_history_limit: 7
+        progress_deadline_seconds: 500
+        paused: false
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.failed == false
+          - result.result.apiVersion == 'apps/v1'
+          - result.result.kind == 'Deployment'
+          - result.result.metadata.name == 'deployment-full'
+          - "{{ result.result.metadata.labels | length == 1 }}"
+          - result.result.metadata.labels.app == 'test'
+          - result.result['spec'].selector.matchLabels.app == 'test'
+          - "{{ result.result['spec'].selector.matchExpressions | length == 1 }}"
+          - "{{ result.result['spec'].selector.matchExpressions[0] | length == 3 }}"
+          - result.result['spec'].selector.matchExpressions[0].key == 'app'
+          - result.result['spec'].selector.matchExpressions[0].operator == 'In'
+          - result.result['spec'].selector.matchExpressions[0]['values'] == [ 'test', 'test1', 'test2' ]
+          - result.result['spec'].template.metadata.labels.app == 'test'
+          - result.result['spec'].template.metadata.name == "deployment-full"
+          - "{{ result.result['spec'].template['spec'].containers | length == 1 }}"
+          - result.result['spec'].template['spec'].containers[0].name == 'test-container'
+          - result.result['spec'].template['spec'].containers[0].image == 'docker/getting-started'
+          - result.result['spec'].template['spec'].containers[0].imagePullPolicy == 'Always'
+          - result.result['spec'].template['spec'].containers[0].command == [ "python3" ]
+          - result.result['spec'].template['spec'].containers[0].args == [ "test.py", "foo", "bar" ]
+          - result.result['spec'].template['spec'].containers[0].workingDir == "/home/test"
+          - "{{ result.result['spec'].template['spec'].containers[0].ports | length == 2 }}"
+          - result.result['spec'].template['spec'].containers[0].ports[0].containerPort == 80
+          - result.result['spec'].template['spec'].containers[0].ports[0].hostIP == 'localhost'
+          - result.result['spec'].template['spec'].containers[0].ports[0].hostPort == 42
+          - result.result['spec'].template['spec'].containers[0].ports[0].name == "first-port"
+          - result.result['spec'].template['spec'].containers[0].ports[0].protocol == "UDP"
+          - result.result['spec'].template['spec'].containers[0].ports[1].containerPort == 81
+          - result.result['spec'].template['spec'].containers[0].ports[1].hostIP == 'localhost'
+          - result.result['spec'].template['spec'].containers[0].ports[1].hostPort == 43
+          - result.result['spec'].template['spec'].containers[0].ports[1].name == "second-port"
+          - result.result['spec'].template['spec'].containers[0].ports[1].protocol == "TCP"
+          - "{{ result.result['spec'].template['spec'].containers[0].env | length == 3}}"
+          - result.result['spec'].template['spec'].containers[0].env[0].name == "ENV_VAR_1"
+          - result.result['spec'].template['spec'].containers[0].env[0].value == "foo"
+          - result.result['spec'].template['spec'].containers[0].env[1].name == "ENV_VAR_2"
+          - result.result['spec'].template['spec'].containers[0].env[1].valueFrom.configMapKeyRef.key == "config_map_field"
+          - result.result['spec'].template['spec'].containers[0].env[1].valueFrom.configMapKeyRef.name == "my-config-map"
+          - result.result['spec'].template['spec'].containers[0].env[2].name == "ENV_VAR_3"
+          - result.result['spec'].template['spec'].containers[0].env[2].valueFrom.secretKeyRef.key == 'secret_field'
+          - result.result['spec'].template['spec'].containers[0].env[2].valueFrom.secretKeyRef.name == 'my-secret'
+          - "{{ result.result['spec'].template['spec'].containers[0].envFrom | length == 2 }}"
+          - result.result['spec'].template['spec'].containers[0].envFrom[0].configMapRef.name == "config-map-2"
+          - result.result['spec'].template['spec'].containers[0].envFrom[0].configMapRef.optional == true
+          - result.result['spec'].template['spec'].containers[0].envFrom[0].prefix == 'FROM_PREFIX'
+          - result.result['spec'].template['spec'].containers[0].envFrom[1].secretRef.name == "secret-2"
+          - result.result['spec'].template['spec'].containers[0].envFrom[1].prefix == 'FROM_PREFIX'
+          - "{{ result.result['spec'].template['spec'].containers[0].volumeMounts | length == 1 }}"
+          - result.result['spec'].template['spec'].containers[0].volumeMounts[0].mountPath == "/home/test_volume"
+          - result.result['spec'].template['spec'].containers[0].volumeMounts[0].mountPropagation == "HostToContainer"
+          - result.result['spec'].template['spec'].containers[0].volumeMounts[0].name == "my-volume"
+          - result.result['spec'].template['spec'].containers[0].volumeMounts[0].subPath == "foo/bar/"
+          - "{{ result.result['spec'].template['spec'].containers[0].volumeDevices | length == 1 }}"
+          - result.result['spec'].template['spec'].containers[0].volumeDevices[0].devicePath == "/home/volume_device"
+          - result.result['spec'].template['spec'].containers[0].volumeDevices[0].name == "my-volume-device"
+          - result.result['spec'].template['spec'].containers[0].resources.limits.cpu == "2"
+          - result.result['spec'].template['spec'].containers[0].resources.limits.memory == "4Gi"
+          - result.result['spec'].template['spec'].containers[0].resources.requests.cpu == "1"
+          - result.result['spec'].template['spec'].containers[0].resources.requests.memory == "2Gi"
+          - "{{ result.result['spec'].template['spec'].imagePullSecrets | length == 2 }}"
+          - result.result['spec'].template['spec'].imagePullSecrets[0].name == "a"
+          - result.result['spec'].template['spec'].imagePullSecrets[1].name == "b"
+          - result.result['spec'].template['spec'].enableServiceLinks == true
+          - "{{ result.result['spec'].template['spec'].volumes | length == 3 }}"
+          - result.result['spec'].template['spec'].volumes[0].name == "my-volume-device"
+          - result.result['spec'].template['spec'].volumes[0].persistentVolumeClaim.claimName == "my_volume_claim"
+          - result.result['spec'].template['spec'].volumes[0].persistentVolumeClaim.readOnly == true
+          - result.result['spec'].template['spec'].volumes[1].name == "my-volume"
+          - result.result['spec'].template['spec'].volumes[1].configMap.defaultMode == 420
+          - result.result['spec'].template['spec'].volumes[1].configMap.name == "config_map_for_volume"
+          - result.result['spec'].template['spec'].volumes[1].configMap.optional == true
+          - "{{ result.result['spec'].template['spec'].volumes[1].configMap['items'] | length == 1 }}"
+          - result.result['spec'].template['spec'].volumes[1].configMap['items'][0].key == "DB_info"
+          - result.result['spec'].template['spec'].volumes[1].configMap['items'][0].mode == 420
+          - result.result['spec'].template['spec'].volumes[1].configMap['items'][0].path == "volume/db_info.json"
+          - result.result['spec'].template['spec'].volumes[2].name == "third-volume"
+          - result.result['spec'].template['spec'].volumes[2].secret.defaultMode == 420
+          - result.result['spec'].template['spec'].volumes[2].secret.secretName == "secret_for_volume"
+          - result.result['spec'].template['spec'].volumes[2].secret.optional == true
+          - "{{ result.result['spec'].template['spec'].volumes[2].secret['items'] | length == 1 }}"
+          - result.result['spec'].template['spec'].volumes[2].secret['items'][0].key == "DB_info"
+          - result.result['spec'].template['spec'].volumes[2].secret['items'][0].mode == 420
+          - result.result['spec'].template['spec'].volumes[2].secret['items'][0].path == "volume/db_info_2.json"
+          - result.result['spec'].replicas == 3
+          - result.result['spec'].minReadySeconds == 30
+          - result.result['spec'].strategy.type == "RollingUpdate"
+          - result.result['spec'].strategy.rollingUpdate.maxSurge == "50%"
+          - result.result['spec'].strategy.rollingUpdate.maxUnavailable == "50%"
+          - result.result['spec'].revisionHistoryLimit == 7
+          - result.result['spec'].progressDeadlineSeconds == 500
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: deployment-full
+        namespace: default
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 1 }}"
+          - results.resources[0].metadata.name == 'deployment-full'
+
+    - name: Delete full example
+      sodalite.k8s.deployment:
+        name: deployment-full
+        state: absent
+        labels:
+          app: test
+        selector:
+          match_labels:
+            app: test
+        containers:
+          - name: test-container
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'
