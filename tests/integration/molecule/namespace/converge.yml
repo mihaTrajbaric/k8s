@@ -1,0 +1,75 @@
+---
+- name: Converge
+  collections:
+    - sodalite.k8s
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Create new namespace
+      sodalite.k8s.namespace:
+        name: test-namespace
+        state: present
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.failed == false
+          - result.result.apiVersion == 'v1'
+          - result.result.kind == 'Namespace'
+          - result.result.metadata.name == 'test-namespace'
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Namespace
+        name: test-namespace
+      register: result
+
+    - assert:
+        that:
+          - "{{ result.resources | length == 1 }}"
+          - result.resources[0].metadata.name == 'test-namespace'
+
+    - name: Add labels and annotations
+      sodalite.k8s.namespace:
+        name: test-namespace
+        state: patched
+        labels:
+          foo: bar
+        annotations:
+          foo2: bar2
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.failed == false
+          - result.result.apiVersion == 'v1'
+          - result.result.kind == 'Namespace'
+          - result.result.metadata.name == 'test-namespace'
+          - result.result.metadata.labels.foo == 'bar'
+          - result.result.metadata.annotations.foo2 == 'bar2'
+
+    - name: Delete minimal example
+      sodalite.k8s.namespace:
+        name: test-namespace
+        state: absent
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'
+
+    - name: Ensure example is really not on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Namespace
+        name: test-namespace
+      register: results
+
+    - assert:
+        that:
+          - results.resources[0].status.phase != 'Active'
