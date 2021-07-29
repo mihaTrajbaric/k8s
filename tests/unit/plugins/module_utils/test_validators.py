@@ -1,4 +1,5 @@
 from __future__ import (absolute_import, division, print_function)
+
 __metaclass__ = type
 
 from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators
@@ -102,7 +103,7 @@ def test_base64():
     assert not Validators.base64('foo')
 
 
-def quantity():
+def test_quantity():
     # memory quantities
     assert Validators.quantity('5Gi')
     assert Validators.quantity('5E')

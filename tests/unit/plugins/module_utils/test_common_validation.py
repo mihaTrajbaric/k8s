@@ -63,4 +63,3 @@ def test_fail2():
     CommonValidation.metadata(module, k8s_def)
     module.fail_json.assert_called_once()
     assert 'labels' in module.fail_json.call_args.kwargs['msg'].lower()
-

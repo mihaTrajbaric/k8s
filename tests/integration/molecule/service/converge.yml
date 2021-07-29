@@ -1,0 +1,247 @@
+---
+- name: Converge
+  collections:
+    - sodalite.k8s
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Minimal example with wait (can take 30s)
+      sodalite.k8s.service:
+        name: service-minimal
+        state: present
+        wait: true
+        ports:
+          - name: my-port
+            port: 8080
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.failed == false
+          - result.result.apiVersion == 'v1'
+          - result.result.kind == 'Service'
+          - result.result.metadata.name == 'service-minimal'
+          - result.result.metadata.namespace == 'default'
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Service
+        name: service-minimal
+        namespace: default
+      register: result
+
+    - assert:
+        that:
+          - "{{ result.resources | length == 1 }}"
+          - result.resources[0].metadata.name == 'service-minimal'
+
+    - name: Idempotency
+      sodalite.k8s.service:
+        name: service-minimal
+        state: present
+        wait: true
+        ports:
+          - name: my-port
+            port: 8080
+      register: result
+
+    - assert:
+        that:
+          - result is not changed
+
+    - name: Delete minimal example
+      sodalite.k8s.service:
+        name: service-minimal
+        state: absent
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'
+
+    - name: Ensure example is really not on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Service
+        name: getting-started
+        namespace: default
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 0}}"
+
+    - name: Test NodePort
+      sodalite.k8s.service:
+        name: service-node-port
+        state: present
+        selector:
+          app: xopera
+        type: NodePort
+        ports:
+          - name: my-port
+            port: 8080
+            target_port: xopera-port
+            node_port: 30001
+            protocol: TCP
+        ip_families: ['IPv4']
+        ip_families_policy: SingleStack
+        cluster_ips:
+          - 10.96.1.1
+        external_ips:
+          - 10.96.1.2
+        session_affinity: ClientIP
+        session_affinity_timeout: 42
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.failed == false
+          - result.result.apiVersion == 'v1'
+          - result.result.kind == 'Service'
+          - result.result.metadata.name == 'service-node-port'
+          - result.result.spec.selector.app == 'xopera'
+          - result.result.spec.type == 'NodePort'
+          - "{{ result.result.spec.ports | length == 1 }}"
+          - result.result.spec.ports[0].name == 'my-port'
+          - result.result.spec.ports[0].nodePort == 30001
+          - result.result.spec.ports[0].port == 8080
+          - result.result.spec.ports[0].protocol == 'TCP'
+          - result.result.spec.ports[0].targetPort == "xopera-port"
+          - "{{ result.result.spec.ipFamilies | length == 1 }}"
+          - result.result.spec.ipFamilies[0] == 'IPv4'
+          - result.result.spec.ipFamilyPolicy == 'SingleStack'
+          - "{{ result.result.spec.clusterIPs | length == 1 }}"
+          - result.result.spec.clusterIPs[0] == "10.96.1.1"
+          - result.result.spec.clusterIP == "10.96.1.1"
+          - "{{ result.result.spec.externalIPs | length == 1 }}"
+          - result.result.spec.externalIPs[0] == "10.96.1.2"
+          - result.result.spec.sessionAffinity == 'ClientIP'
+          - result.result.spec.sessionAffinityConfig.clientIP.timeoutSeconds == 42
+
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Service
+        name: service-node-port
+        namespace: default
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 1 }}"
+          - results.resources[0].metadata.name == 'service-node-port'
+
+    - name: Delete full example
+      sodalite.k8s.service:
+        name: service-node-port
+        state: absent
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'
+
+    - name: Test LoadBalancer
+      sodalite.k8s.service:
+        name: service-load-balancer
+        state: present
+        type: LoadBalancer
+        ports:
+          - name: my-port
+            port: 8080
+        load_balancer_ip: '10.10.10.1'
+        load_balancer_source_ranges: '10.96.1.1/22'
+        # cannot test on minikube
+        # load_balancer_class: a-b
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.failed == false
+          - result.result.apiVersion == 'v1'
+          - result.result.kind == 'Service'
+          - result.result.metadata.name == 'service-load-balancer'
+          - result.result.spec.type == 'LoadBalancer'
+          - "{{ result.result.spec.ports | length == 1 }}"
+          - result.result.spec.ports[0].name == 'my-port'
+          - result.result.spec.ports[0].port == 8080
+          - result.result.spec.loadBalancerIP == '10.10.10.1'
+          - "{{ result.result.spec.loadBalancerSourceRanges | length == 1 }}"
+          - result.result.spec.loadBalancerSourceRanges[0] == '10.96.1.1/22'
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Service
+        name: service-load-balancer
+        namespace: default
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 1 }}"
+          - results.resources[0].metadata.name == 'service-load-balancer'
+
+    - name: Delete full example
+      sodalite.k8s.service:
+        name: service-load-balancer
+        state: absent
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'
+
+    - name: Test ExternalName
+      sodalite.k8s.service:
+        name: service-external-name
+        state: present
+        type: ExternalName
+        ports:
+          - name: my-port
+            port: 8080
+        external_name: test.k8s.com
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.failed == false
+          - result.result.apiVersion == 'v1'
+          - result.result.kind == 'Service'
+          - result.result.metadata.name == 'service-external-name'
+          - result.result.spec.type == 'ExternalName'
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Service
+        name: service-external-name
+        namespace: default
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 1 }}"
+          - results.resources[0].metadata.name == 'service-external-name'
+
+    - name: Delete full example
+      sodalite.k8s.service:
+        name: service-external-name
+        state: absent
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'

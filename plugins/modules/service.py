@@ -5,7 +5,7 @@
 from __future__ import (absolute_import, division, print_function)
 
 __metaclass__ = type
-# TODO better describe types
+
 DOCUMENTATION = r'''
 ---
 module: service
@@ -83,15 +83,17 @@ options:
     type:
         description:
         - Determines how the Service is exposed.
-        - I(type==ClusterIP) allocates a cluster-internal IP address for load-balancing to endpoints. Endpoints are
-          determined by the selector or if that is not specified, by manual construction of an Endpoints object or
-          EndpointSlice objects. If I(cluster_ip=None), no virtual IP is allocated and the endpoints are published as
-          a set of endpoints rather than a virtual IP.
-        - I(type=NodePort) builds on ClusterIP and allocates a port on every node which routes to the same endpoints
-          as the clusterIP.
-        - I(type=LoadBalancer) builds on NodePort and creates an external load-balancer (if supported in the current
-          cloud) which routes to the same endpoints as the clusterIP.
-        - I(type=ExternalName) aliases this service to the specified I(external_name).
+        - I(type==ClusterIP) exposes the Service on a cluster-internal IP. Choosing this value makes the Service only
+          reachable from within the cluster. If I(cluster_ip=None), no virtual IP is allocated and the endpoints are
+          published as a set of endpoints rather than a virtual IP.
+        - I(type=NodePort) exposes the Service on each Node's IP at a static port (the NodePort). A ClusterIP Service,
+          to which the NodePort Service routes, is automatically created. NodePort Service can be accessed from outside
+          the cluster by requesting <NodeIP>:<NodePort>.
+        - I(type=LoadBalancer) exposes the Service externally using a cloud provider's load balancer. NodePort and
+          ClusterIP Services, to which the external load balancer routes, are automatically created. It routes to the
+          same endpoints as the clusterIP.
+        - I(type=ExternalName) maps the Service to the contents of the I(external_name) field
+          (e.g. foo.bar.example.com), by returning a CNAME record with its value. No proxying of any kind is set up.
         type: str
         default: ClusterIP
         choices: [ ExternalName, ClusterIP, NodePort, LoadBalancer ]
@@ -121,9 +123,8 @@ options:
         - I(ip_families_policy=RequireDualStack) will enable two IP families on dual-stack configured clusters and fail
           on single-stack clusters.
         - The I(ip_families) and I(cluster_ips) fields depend on the value of this field.
-        - This field will be wiped when updating a service to type I(type=ExternalName).
+        - This field cannot be used with I(type=ExternalName) and will be wiped when updating to a service of that type.
         type: str
-        default: SingleStack
         choices: [ SingleStack, PreferDualStack, RequireDualStack ]
     cluster_ip:
         description:
@@ -255,61 +256,126 @@ seealso:
 author:
     - Mihael Trajbarič (@mihaTrajbaric)
 '''
-# TODO examples
+
 EXAMPLES = r'''
-# Create PersistentVolumeClaim
-- name: Create simple PersistentVolumeClaim
-  sodalite.k8s.pvc:
-    name: pvc-test
+- name: Create simple Service
+  sodalite.k8s.service:
+    name: service-cluster-ip
     state: present
-    access_modes:
-        - ReadWriteMany
-        - ReadWriteOnce
-    storage_request: 5Gi
+    ports:
+    - name: my-port
+      port: 8080
 
-# Create PersistentVolumeClaim with match_expressions
-- name: PersistentVolumeClaim with matchExpressions selector
-  sodalite.k8s.pvc:
-    name: pvc-test
+- name: Type NodePort with ip_families defined
+  sodalite.k8s.service:
+    name: service-test
     state: present
-    selector:
-        match_expressions:
-          - key: app-volume
-            operator: In
-            values: [postgres, mysql]
-    access_modes:
-        - ReadWriteMany
-        - ReadWriteOnce
-    storage_request: 5Gi
+    type: NodePort
+    ports:
+    - name: my-port
+      port: 8080
+    ip_families:
+    - IPv4
+    ip_families_policy: SingleStack
 
-# Create PersistentVolumeClaim with match_labels
-- name: PersistentVolumeClaim with matchLabels selector
-  sodalite.k8s.pvc:
-    name: pvc-test
+- name: Specify ClusterIP
+  sodalite.k8s.service:
+    name: service-cluster-ip
     state: present
-    selector:
-        match_labels:
-          app-volume: postgres
-    access_modes:
-        - ReadWriteMany
-        - ReadWriteOnce
-    storage_request: 5Gi
+    ports:
+    - name: my-port
+      port: 8080
+      target_port: xopera-port
+      node_port: 30001
+      protocol: TCP
+    cluster_ip: 10.96.0.43
 
-# Create PersistentVolumeClaim with ResourceRequirements
-- name: PersistentVolumeClaim with storage_request and storage_limit
-  sodalite.k8s.pvc:
-    name: pvc-test
+- name: Request IPv4/IPv6 dual stack
+  sodalite.k8s.service:
+    name: service-dual-stack
     state: present
-    access_modes:
-        - ReadWriteMany
-        - ReadWriteOnce
-    storage_request: 5Gi
-    storage_limit: 10Gi
+    ports:
+    - name: my-port
+      port: 8080
+    ip_families:
+    - IPv4
+    - IPv6
+    ip_families_policy: RequireDualStack
 
-# Remove PersistentVolumeClaim
-- name: Remove pvc
-  sodalite.k8s.pvc:
-    name: pvc-test
+- name: External IPs
+  sodalite.k8s.service:
+    name: service-external-ips
+    state: present
+    ports:
+    - name: my-port
+      port: 8080
+    external_ips:
+      - 77.54.34.1
+      - 77.54.23.6
+
+- name: External load balancer
+  sodalite.k8s.service:
+    name: service-load-balancer
+    state: present
+    type: LoadBalancer
+    ports:
+    - name: my-port
+      port: 8080
+    ip_families: ['IPv4', 'IPv6']
+    ip_families_policy: RequireDualStack
+    cluster_ips:
+      - 10.96.1.1
+      - 2001:db8:3333:4444:5555:6666:7777:8888
+    load_balancer_ip: 77.230.145.14
+    load_balancer_source_ranges:
+      - 2001:db8:abcd:0012::0/64
+      - 77.103.1.1/24
+    load_balancer_class: internal-vip
+
+- name: External name
+  sodalite.k8s.service:
+    name: service-external-name
+    state: present
+    type: ExternalName
+    ports:
+    - name: my-port
+      port: 8080
+    external_name: app.domain.com
+
+- name: Policies and health_check
+  sodalite.k8s.service:
+    name: service-policies
+    state: present
+    type: LoadBalancer
+    ports:
+    - name: my-port
+      port: 8080
+    external_traffic_policy: Local
+    internal_traffic_policy: Cluster
+    health_check_node_port: 30000
+
+- name: Disregard readiness of service
+  sodalite.k8s.service:
+    name: service-ready-irrelevant
+    state: present
+    ports:
+    - name: my-port
+      port: 8080
+    publish_not_ready_addresses: yes
+
+- name: Route client's requests to the same pod for 1 hour
+  sodalite.k8s.service:
+    name: service-session-affinity
+    state: present
+    ports:
+    - name: my-port
+      port: 8080
+    session_affinity: ClientIP
+    session_affinity_timeout: 60
+
+- name: Remove Service
+  sodalite.k8s.service:
+    name: service-test
     state: absent
 '''
 
@@ -375,8 +441,8 @@ def definition(params):
                 {
                     'port': port_obj.get('port'),
 
-                    'targetPort': int(port_obj.get('target_port'))      # not the best code for conditional
-                    if (port_obj.get('target_port') or "").isdigit()    # str -> int conversion but it works
+                    'targetPort': int(port_obj.get('target_port'))      # this code would be much prettier with
+                    if (port_obj.get('target_port') or "").isdigit()    # Walrus operator, added in python 3.8
                     else port_obj.get('target_port'),
 
                     'protocol': port_obj.get('protocol'),
@@ -479,8 +545,8 @@ def validate(module, k8s_definition):
                                  " when multiple ip_families are specified")
 
     # first verify cluster_ips; if cluster_ip had not been defined, it could be just copied from cluster_ips[0].
-    # Validating cluster_ips first will make user get the right error message (with reference to cluster_ips,
-    # not cluster_ip
+    # Validating cluster_ips first will make user get the right error message (with reference to cluster_ips[0],
+    # not cluster_ip)
 
     cluster_ip = spec.get('clusterIP')
     cluster_ips = spec.get('clusterIPs') or []
@@ -576,8 +642,7 @@ def main():
         )),
         type=dict(type='str', default='ClusterIP', choices=['ExternalName', 'ClusterIP', 'NodePort', 'LoadBalancer']),
         ip_families=dict(type='list', elements='str', choices=['IPv4', 'IPv6']),
-        ip_families_policy=dict(type='str', default='SingleStack',
-                                choices=['SingleStack', 'PreferDualStack', 'RequireDualStack'], ),
+        ip_families_policy=dict(type='str', choices=['SingleStack', 'PreferDualStack', 'RequireDualStack'], ),
         cluster_ip=dict(type='str'),
         cluster_ips=dict(type='list', elements='str'),
         external_ips=dict(type='list', elements='str'),
@@ -608,10 +673,6 @@ def main():
     k8s_def = definition(module.params)
     if module.params.get('state') != 'absent':
         validate(module, k8s_def)
-
-    import json
-    # module.exit_json(msg=json.dumps(k8s_def, indent=2))
-    # module.exit_json(msg='ok')
 
     execute_module(module, k8s_def)
 
