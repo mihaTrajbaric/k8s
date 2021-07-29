@@ -282,11 +282,11 @@ class CommonValidation:
         if 'selector' in k8s_definition['spec'].keys():
             match_expressions = k8s_definition['spec']['selector'].get('matchExpressions', list())
             for expression in match_expressions:
-                valid_keys = ('In', 'NotIn', 'Exists', 'DoesNotExist')
+                valid_operators = ('In', 'NotIn', 'Exists', 'DoesNotExist')
                 operator = expression.get('operator')
-                if operator not in valid_keys:
-                    module.fail_json(msg="Every selector.match_expressions.key should be chosen "
-                                         "from {0}".format({', '.join(valid_keys)}))
+                if operator not in valid_operators:
+                    module.fail_json(msg="Every selector.match_expressions.operator should be chosen "
+                                         "from {0}".format({', '.join(valid_operators)}))
                 values_condition = (operator in ('In', 'NotIn')) == bool(expression.get('values'))
                 if not values_condition:
                     module.fail_json(msg="If in any selector.match_expressions operator is 'In' or 'NotIn', the values "

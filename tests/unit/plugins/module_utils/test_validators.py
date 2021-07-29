@@ -143,3 +143,33 @@ def test_port():
     assert Validators.port(1)
     assert Validators.port(65535)
     assert not Validators.port(65536)
+
+
+def test_ip_address():
+    assert Validators.ip_address('192.168.1.1')
+    assert Validators.ip_address('2001:db8:3333:4444:CCCC:DDDD:EEEE:FFFF')
+    assert not Validators.ip_address('192.168.1.315')
+    assert not Validators.ip_address('a')
+
+
+def test_ipv4_address():
+    assert Validators.ipv4_address('192.168.1.1')
+    assert not Validators.ipv4_address('2001:db8:3333:4444:CCCC:DDDD:EEEE:FFFF')
+    assert not Validators.ipv4_address('192.168.1.315')
+    assert not Validators.ipv4_address('a')
+
+
+def test_ipv6_address():
+    assert not Validators.ipv6_address('192.168.1.1')
+    assert Validators.ipv6_address('2001:db8:3333:4444:CCCC:DDDD:EEEE:FFFF')
+    assert not Validators.ipv6_address('2001:db8:3333:4444:CCCC:DDDD:EEEE:FFFF:AAAA')
+    assert not Validators.ipv6_address('a')
+
+
+def test_ip_range():
+    assert Validators.ip_range('192.168.1.0/24')
+    assert not Validators.ip_range('192.168.1.0/33')
+    assert not Validators.ip_range('a')
+    assert Validators.ip_range('::/0')
+    assert Validators.ip_range('2001:db8::/128')
+    assert not Validators.ip_range('2001:db8::/129')
