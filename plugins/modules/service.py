@@ -5,7 +5,7 @@
 from __future__ import (absolute_import, division, print_function)
 
 __metaclass__ = type
-# TODO options
+# TODO better describe types
 DOCUMENTATION = r'''
 ---
 module: service
@@ -127,27 +127,29 @@ options:
         choices: [ SingleStack, PreferDualStack, RequireDualStack ]
     cluster_ip:
         description:
-        - The IP address of the service and is usually assigned randomly.
-        - If an address is specified manually, is in-range (as per system configuration), and is not in use, it will be
+        - The IP address for the service.
+        - It is usually assigned automatically.
+        - If I(cluster_ip) address is in-range (as per system configuration), and is not in use, it will be
           allocated to the service; otherwise creation of the service will fail.
-        - This field may not be changed through updates unless the type field is also being changed to or from
-          I(type=ExternalName) (ExternalName requires this field to be blank, otherwise it is optional)
         - Valid values are "None", empty string (""), or a valid IP address.
         - Setting this to "None" makes a "headless service" (no virtual IP), which is useful when direct endpoint
           connections are preferred and proxying is not required.
         - Only applies to types ClusterIP, NodePort, and LoadBalancer.
         - If this field is specified when creating a Service of I(type=ExternalName), creation will fail.
+        - This field may not be changed through updates unless the type field is also being changed to or from
+          I(type=ExternalName) (ExternalName requires this field to be blank, otherwise it is optional)
         - This field will be wiped when updating a Service to type ExternalName.
+        - Mutually exclusive with I(cluster_ips)
         type: str
     cluster_ips:
         description:
         - A list of IP addresses assigned to this service.
         - Every IP address must follow the same guidelines, as I(cluster_ip).
-        - If both I(cluster_ips) and I(cluster_ip) are specified, cluster_ips[0] and cluster_ip must have the same
-          value.
+        - Cluster_ips[0] will be automatically added to clusterIP field in k8s definition.
         - Unless the "IPv6DualStack" feature gate is enabled, this field is limited to one value, otherwise, it may
           hold a maximum of two entries (dual-stack IPs, in either order). These IPs must correspond to the values of
           the I(ip_families) field.
+        - Mutually exclusive with I(cluster_ip)
         type: list
         elements: str
     external_ips:
@@ -170,6 +172,7 @@ options:
         description:
         - Can be used only with I(type=LoadBalancer).
         - Traffic through the cloud-provider load-balancer will be restricted to the specified client IPs.
+        - Elements must be valid CIDR blocks (IPv4 or IPv6)
         - This field will be ignored if the cloud-provider does not support the feature.
         type: list
         elements: str
@@ -354,141 +357,261 @@ from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (u
 from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators, CommonValidation
 from ansible_collections.sodalite.k8s.plugins.module_utils.helper import clean_dict
 
+from copy import deepcopy
+
 
 def definition(params):
-    # TODO
     body = {
         "apiVersion": "v1",
-        "kind": "PersistentVolumeClaim",
+        "kind": "Service",
         "metadata": {
             "name": params.get('name'),
             "labels": params.get('labels'),
             "annotations": params.get('annotations')
         },
         'spec': {
-            'accessModes': params.get('access_modes'),
-            'selector': {
-                'matchExpressions': (params.get('selector') or {}).get('match_expressions'),
-                'matchLabels': (params.get('selector') or {}).get('match_labels')
-            },
-            'resources': {
-                'requests': {
-                    'storage': params.get('storage_request')
-                },
-                'limits': {
-                    'storage': params.get('storage_limit')
+            'selector': params.get('selector'),
+            'ports': [
+                {
+                    'port': port_obj.get('port'),
+
+                    'targetPort': int(port_obj.get('target_port'))      # not the best code for conditional
+                    if (port_obj.get('target_port') or "").isdigit()    # str -> int conversion but it works
+                    else port_obj.get('target_port'),
+
+                    'protocol': port_obj.get('protocol'),
+                    'name': port_obj.get('name'),
+                    'nodePort': port_obj.get('node_port'),
                 }
-            },
-            'volumeName': params.get('volume_name'),
-            'storageClassName': params.get('storage_class_name'),
-            'volumeMode': params.get('volume_mode')
+                for port_obj in params.get('ports') or list()
+            ],
+            'type': params.get('type'),
+            'ipFamilies': params.get('ip_families'),
+            'ipFamilyPolicy': params.get('ip_families_policy'),
+            'clusterIP': params.get('cluster_ip')
+            or (params.get('cluster_ips')[0] if params.get('cluster_ips') else None),  # adds clusterIP[0] to clusterIP
+            'clusterIPs': params.get('cluster_ips'),
+            'externalIPs': params.get('external_ips'),
+            'loadBalancerIP': params.get('load_balancer_ip'),
+            'loadBalancerSourceRanges': params.get('load_balancer_source_ranges'),
+            'loadBalancerClass': params.get('load_balancer_class'),
+            'externalName': params.get('external_name'),
+            'externalTrafficPolicy': params.get('external_traffic_policy'),
+            'internalTrafficPolicy': params.get('internal_traffic_policy'),
+            'healthCheckNodePort': params.get('health_check_node_port'),
+            'publishNotReadyAddresses': params.get('publish_not_ready_addresses'),
+            'sessionAffinity': params.get('session_affinity'),
+            'sessionAffinityConfig': {
+                'clientIP': {
+                    'timeoutSeconds': params.get('session_affinity_timeout')
+                }
+            }
         }
     }
     return clean_dict(body)
 
 
 def validate(module, k8s_definition):
-    # TODO
+
     CommonValidation.metadata(module, k8s_definition)
-    CommonValidation.selector(module, k8s_definition)
+    # for some reason, name should be a RFC 1035 Label Names
+    if not Validators.dns_label_1035(k8s_definition['metadata']['name']):
+        module.fail_json(msg=f"name {Validators.dns_label_1035_msg}")
 
-    access_modes = k8s_definition['spec'].get('accessModes', list())
-    if not access_modes:
-        module.fail_json(msg="Access_modes should have at least 1 element")
+    service_type = k8s_definition.get('spec').get('type')
 
-    access_modes_valid = all([item in ('ReadWriteOnce', 'ReadOnlyMany', 'ReadWriteMany') for item in access_modes])
-    if not access_modes_valid:
-        module.fail_json(msg="Elements of access_modes should be chosen from "
-                             "('ReadWriteOnce', 'ReadOnlyMany', 'ReadWriteMany')")
+    selector = k8s_definition.get('spec').get('selector')
 
-    if 'resources' in k8s_definition['spec'].keys():
-        limits = k8s_definition['spec']['resources'].get('limits', dict())
-        if not Validators.string_quantity_dict(limits):
-            module.fail_json(msg="Storage_limit should be map[string]Quantity")
+    if selector:
+        if service_type == 'ExternalName':
+            module.fail_json(msg='selector is not allowed with type=ExternalName')
+        if not Validators.string_string_dict(selector):
+            module.fail_json(msg="selector should be map[string]string")
 
-        requests = k8s_definition['spec']['resources'].get('requests', dict())
-        if not Validators.string_quantity_dict(requests):
-            module.fail_json(msg="Storage_request should be map[string]Quantity")
+    # validate spec
+    spec = k8s_definition['spec']
+
+    # validate unique port names
+    port_names = list()
+
+    if len(spec.get('ports') or list()) < 1:
+        module.fail_json(msg="ports must have at least one element")
+
+    for i, port_obj in enumerate(spec.get('ports')):
+
+        if not Validators.port(port_obj.get('port')):
+            module.fail_json(msg=f"ports[{i}].port {Validators.port_msg}")
+
+        target_port = port_obj.get('targetPort')
+        if isinstance(target_port, int) and not Validators.port(target_port):
+            module.fail_json(msg=f"ports[{i}].target_port is a number and {Validators.port_msg}")
+        if isinstance(target_port, str) and not Validators.iana_svc_name(target_port):
+            module.fail_json(msg=f"ports[{i}].target_port is a name and {Validators.iana_svc_name_msg}")
+
+        port_name = port_obj.get('name')
+        if port_name in port_names:
+            module.fail_json(msg=f"Duplicate port name found (ports[{i}].name). "
+                                 f"Each named port in a service must have a unique name")
+        if port_name:
+            port_names.append(port_name)
+        if not Validators.dns_label(port_name):
+            module.fail_json(msg=f"ports[{i}].name {Validators.dns_label_msg}")
+        if len(spec.get('ports')) > 1 and port_name is None:
+            module.fail_json(msg=f"ports[{i}].name is not set, but should be, since service has more then one port")
+
+        if not Validators.port(port_obj.get('nodePort')):
+            module.fail_json(msg=f"ports[{i}].node_port {Validators.port_msg}")
+
+    ip_families = spec.get('ipFamilies') or list()
+    ip_families_policy = spec.get('ipFamilyPolicy')
+
+    if ip_families:
+        if service_type == 'ExternalName':
+            module.fail_json(msg='ip_families is not allowed with type=ExternalName')
+        if len(ip_families) > 2:
+            module.fail_json(msg='ip_families field may hold a maximum of two entries '
+                                 '(dual-stack families, in either order)')
+        if len(ip_families) == 2 and ip_families[0] == ip_families[1]:
+            module.fail_json(msg='The same IP Family cannot be specified more then once')
+
+        if len(ip_families) == 2 and ip_families_policy == 'SingleStack':
+            module.fail_json(msg="ip_families_policy must be set to 'RequireDualStack' or 'PreferDualStack'"
+                                 " when multiple ip_families are specified")
+
+    # first verify cluster_ips; if cluster_ip had not been defined, it could be just copied from cluster_ips[0].
+    # Validating cluster_ips first will make user get the right error message (with reference to cluster_ips,
+    # not cluster_ip
+
+    cluster_ip = spec.get('clusterIP')
+    cluster_ips = spec.get('clusterIPs') or []
+    if service_type == 'ExternalName' and (cluster_ip or cluster_ips):
+        module.fail_json(msg='cluster_ip and cluster_ips are not allowed with type=ExternalName')
+
+    if cluster_ips:
+        if len(cluster_ips) > 2:
+            module.fail_json(msg='cluster_ips field may hold a maximum of two entries '
+                                 '(dual-stack IPs, in either order. First IP will also be copied to ClusterIP field)')
+        if len(cluster_ips) == 2:
+            if ip_families_policy == 'SingleStack':
+                module.fail_json(msg="ip_families_policy must be set to 'RequireDualStack' or 'PreferDualStack'"
+                                     " when multiple cluster_ips are specified")
+
+            # check if one is IPv4 and other IPv6
+            if Validators.ipv4_address(cluster_ips[0]) and Validators.ipv4_address(cluster_ips[1]) or \
+                    Validators.ipv6_address(cluster_ips[0]) and Validators.ipv6_address(cluster_ips[1]):
+                module.fail_json(msg="One IP in cluster_ips must be IPv4 and other IPv6")
+
+    ip_validation = \
+        Validators.ip_address if len(ip_families) != 1 else \
+        Validators.ipv4_address if ip_families[0] == 'IPv4' else \
+        Validators.ipv6_address
+
+    ip_validation_msg = \
+        Validators.ip_address_msg if len(ip_families) != 1 else \
+        Validators.ipv4_address_msg if ip_families[0] == 'IPv4' else \
+        Validators.ipv6_address_msg
+
+    for i, cluster_ip_item in enumerate(cluster_ips):
+
+        if not (cluster_ip_item in (None, "None", "") or ip_validation(cluster_ip_item)):
+            module.fail_json(msg=f'cluster_ips[{i}] {ip_validation_msg}, None or "" when "ip_families" is'
+                                 f' {ip_families or "not specified"}')
+
+    if not (cluster_ip in (None, "None", "") or ip_validation(cluster_ip)):
+        module.fail_json(msg=f'cluster_ip {ip_validation_msg}, None or "" when "ip_families" is'
+                             f' {ip_families or "not specified"}')
+
+    for i, external_ip in enumerate(spec.get('externalIPs') or []):
+        if not Validators.ip_address(external_ip):
+            module.fail_json(msg=f'external_ips[{i}] {Validators.ip_address_msg}')
+
+    if service_type != 'LoadBalancer' and (spec.get('loadBalancerIP') or
+                                           spec.get('loadBalancerSourceRanges') or
+                                           spec.get('loadBalancerClass')):
+        module.fail_json(msg="load_balancer_ip, load_balancer_source_ranges and load_balancer_class "
+                             "are only valid with type='LoadBalancer'")
+
+    if not Validators.ip_address(spec.get('loadBalancerIP')):
+        module.fail_json(msg=f'load_balancer_ip {Validators.ip_address_msg}')
+    for i, ip_range in enumerate(spec.get('load_balancer_source_ranges') or list()):
+        if not Validators.ip_range(ip_range):
+            module.fail_json(msg=f'load_balancer_source_ranges[{i}] {Validators.ip_range_msg}')
+
+    external_name = spec.get('externalName')
+    if external_name:
+        if service_type != 'ExternalName':
+            module.fail_json(msg="external_name is only valid with type='ExternalName'")
+        if not Validators.dns_subdomain(external_name):
+            module.fail_json(msg=f'external_name {Validators.dns_subdomain_msg}')
+
+    health_check_node_port = spec.get('healthCheckNodePort')
+    external_traffic_policy = spec.get('externalTrafficPolicy')
+    if health_check_node_port:
+        if not (service_type == 'LoadBalancer' and external_traffic_policy == 'Local'):
+            module.fail_json(msg="health_check_node_port is only valid with type='LoadBalancer' "
+                                 "and external_traffic_policy='Local'")
+        if not Validators.port(health_check_node_port):
+            module.fail_json(msg=f'health_check_node_port {Validators.port_msg}')
+
+    session_affinity_timeout = spec.get('sessionAffinityConfig').get('clientIP').get('timeoutSeconds')
+
+    # "user defined session_affinity_timeout" is almost the same as
+    # "session_affinity_timeout is not set to default value"
+    if session_affinity_timeout != 10800 and spec.get('sessionAffinity') != 'ClientIP':
+        module.fail_json("session_affinity_timeout can only be used with session_affinity='ClientIP'")
+    if not 0 < session_affinity_timeout <= 86400:
+        module.fail_json(msg='session_affinity_timeout must be 0 < x <= 86400')
 
 
 def main():
     argspec = update_arg_spec()
     argspec.update(dict(
-        # TODO name: RFC1035 label
-        # TODO selector: Only applies to types ClusterIP, NodePort, and LoadBalancer. Ignored if type is ExternalName.
         selector=dict(type='dict'),
         ports=dict(type='list', elements='dict', options=dict(
             port=dict(type='int', required=True),
-            # TODO target_port is ignored for services with clusterIP=None, and should be omitted
-            #  or set equal to the 'port' field.
-            # TODO validate port (0 < x < 65536) (if int)
-            # TODO validate IANA_SVC_NAME (if string)
             target_port=dict(type='str'),
             protocol=dict(type='str', choices=['UDP', 'TCP', 'SCTP'], default='TCP'),
-            # TODO validate, DNS_LABEL, unique within service
-            # TODO optional if only one port on this service, otherwise required
             name=dict(type='str'),
             node_port=dict(type='int')
         )),
         type=dict(type='str', default='ClusterIP', choices=['ExternalName', 'ClusterIP', 'NodePort', 'LoadBalancer']),
-
-        # optional values
-        # TODO validate max_len = 2
-        # TODO not with ExternalName
         ip_families=dict(type='list', elements='str', choices=['IPv4', 'IPv6']),
         ip_families_policy=dict(type='str', default='SingleStack',
                                 choices=['SingleStack', 'PreferDualStack', 'RequireDualStack'], ),
-
-        # TODO validate IP or None or ""
-        # TODO not with ExternalName
-        # TODO first entry must also go to clusterIP???
-        # Max 2 values (but only if cluster_ip)
-        cluster_ips=dict(type='list', elements='str'),
         cluster_ip=dict(type='str'),
-
-        # TODO validate IP (v4 or v6)
+        cluster_ips=dict(type='list', elements='str'),
         external_ips=dict(type='list', elements='str'),
-
-        # TODO only with LoadBalancer
         load_balancer_ip=dict(type='str'),
         load_balancer_source_ranges=dict(type='list', elements='str'),
         load_balancer_class=dict(type='str'),
-
-        # TODO only with ExternalName
-        # TODO validate lowercase RFC-1123 hostname
         external_name=dict(type='str'),
-
-        # traffic policies
         external_traffic_policy=dict(type='str', choices=['Local', 'Cluster']),
         internal_traffic_policy=dict(type='str', choices=['Local', 'Cluster'], default='Cluster'),
-
-        # TODO only type == LoadBalancer and external_traffic_policy == Local
-        # TODO validate port?
         health_check_node_port=dict(type='int'),
-        # TODO verify if true/false is not reversed
         publish_not_ready_addresses=dict(type='bool', default=False),
-
-        # session affinity
         session_affinity=dict(type='str', choices=['ClientIP', 'None'], default='None'),
-        # TODO only if session_affinity==ClientIP
         session_affinity_timeout=dict(type='int', default=10800)
 
-
-
     ))
-    # required_if = [
-    #     ('state', 'present', ('access_modes', 'storage_request'))
-    # ]
+    required_if = [
+        ('state', 'present', ('ports',))
+    ]
+    mutually_exclusive = deepcopy(UPDATE_MUTUALLY_EXCLUSIVE)
+    mutually_exclusive.append(('cluster_ip', 'cluster_ips'))
 
     module = AnsibleModule(argument_spec=argspec,
-                           # required_if=required_if,
-                           mutually_exclusive=UPDATE_MUTUALLY_EXCLUSIVE,
+                           required_if=required_if,
+                           mutually_exclusive=mutually_exclusive,
                            supports_check_mode=True)
     from ansible_collections.sodalite.k8s.plugins.module_utils.k8s_connector import execute_module
 
     k8s_def = definition(module.params)
     if module.params.get('state') != 'absent':
         validate(module, k8s_def)
+
+    import json
+    # module.exit_json(msg=json.dumps(k8s_def, indent=2))
+    # module.exit_json(msg='ok')
 
     execute_module(module, k8s_def)
 

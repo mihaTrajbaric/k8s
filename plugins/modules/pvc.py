@@ -251,6 +251,9 @@ def validate(module, k8s_definition):
     CommonValidation.metadata(module, k8s_definition)
     CommonValidation.selector(module, k8s_definition)
 
+    if not Validators.dns_subdomain(k8s_definition['metadata']['name']):
+        module.fail_json(msg=f"'name' {Validators.dns_subdomain_msg}")
+
     access_modes = k8s_definition['spec'].get('accessModes', list())
     if not access_modes:
         module.fail_json(msg="Access_modes should have at least 1 element")

@@ -64,22 +64,3 @@ def test_fail2():
     module.fail_json.assert_called_once()
     assert 'labels' in module.fail_json.call_args.kwargs['msg'].lower()
 
-
-def test_fail3():
-    module = MagicMock()
-    k8s_def = {
-        'metadata': {
-            'annotations': {
-                'foo': 'bar',
-                'foo2': 'bar2'
-            },
-            'labels': {
-                'foo': '1',
-                'foo2': 'bar2'
-            },
-            'name': '_foo'
-        }
-    }
-    CommonValidation.metadata(module, k8s_def)
-    module.fail_json.assert_called_once()
-    assert 'name' in module.fail_json.call_args.kwargs['msg'].lower()

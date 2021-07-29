@@ -4,6 +4,7 @@ __metaclass__ = type
 
 import base64
 import re
+import ipaddress
 
 
 class Base64:
@@ -63,9 +64,9 @@ class Validators:
         last_char_alnum = value[-1].isalnum()
         return length_valid and second_constraint and first_char_alnum and last_char_alnum
 
-    dns_label_1123_msg = "should be a valid lowercase RFC 1123 Label Name. It must not be longer then 63 characters," \
-                         "must consist of lower case alphanumeric characters or '-' and must start and end with an " \
-                         "alphanumeric character"
+    dns_label_1123_msg = "should be a valid lowercase RFC 1123 DNS Label Name. It must not be longer then 63 " \
+                         "characters, must consist of lower case alphanumeric characters or '-' and must start and " \
+                         "end with an alphanumeric character"
 
     @staticmethod
     def dns_label_1123(value):
@@ -86,9 +87,9 @@ class Validators:
         last_char_alnum = value[-1].isalnum()
         return length_valid and second_constraint and first_char_alnum and last_char_alnum
 
-    dns_label_1035_msg = "should be a valid lowercase RFC 1135 subdomain. It must not be longer then 63 characters," \
-                         "must consist of lower case alphanumeric characters or '-' must start with alphabetic" \
-                         " character and end with an alphanumeric character."
+    dns_label_1035_msg = "should be a valid lowercase RFC 1135 DNS Label Name. It must not be longer then 63 " \
+                         "characters, must consist of lower case alphanumeric characters or '-' must start with " \
+                         "alphabetic character and end with an alphanumeric character."
 
     @staticmethod
     def dns_label_1035(value):
@@ -197,6 +198,67 @@ class Validators:
             return True
         return 0 < x < 65536
 
+    ip_address_msg = "should be a valid IPv4 or IPv6 address"
+
+    @staticmethod
+    def ip_address(address):
+        """
+        Validates ip address (IPv4 or IPv6)
+        """
+        if address is None:
+            return True
+        try:
+            ipaddress.ip_address(address)
+            return True
+        except ValueError:
+            return False
+
+    ipv4_address_msg = "should be a valid IPv4 address"
+
+    @staticmethod
+    def ipv4_address(address):
+        """
+        Validates IPv4 address
+        """
+        if address is None:
+            return True
+        try:
+            ipaddress.IPv4Address(address)
+            return True
+        except ValueError:
+            return False
+
+    ipv6_address_msg = "should be a valid IPv6 address"
+
+    @staticmethod
+    def ipv6_address(address):
+        """
+        Validates IPv6 address
+        """
+        if address is None:
+            return True
+        try:
+            ipaddress.IPv6Address(address)
+            return True
+        except ValueError:
+            return False
+
+    ip_range_msg = "should be a valid IPv4 (e.g. '143.231.0.0/16') " \
+                   "or IPv6 (e.g. 2001:db8:abcd:0012::0/64) IP range (CIDR block)"
+
+    @staticmethod
+    def ip_range(ip_range):
+        """
+        Validates IP range
+        """
+        if ip_range is None:
+            return True
+        try:
+            ipaddress.ip_network(ip_range)
+            return True
+        except ValueError:
+            return False
+
 
 class CommonValidation:
 
@@ -207,13 +269,10 @@ class CommonValidation:
         """
         annotations = k8s_definition['metadata'].get('annotations', dict())
         labels = k8s_definition['metadata'].get('labels', dict())
-        name = k8s_definition['metadata']['name']
         if not Validators.string_string_dict(annotations):
             module.fail_json(msg="Annotations should be map[string]string")
         if not Validators.string_string_dict(labels):
             module.fail_json(msg="Labels should be map[string]string")
-        if not Validators.dns_subdomain(name):
-            module.fail_json(msg=f"'name' {Validators.dns_subdomain_msg}")
 
     @staticmethod
     def selector(module, k8s_definition):
@@ -231,8 +290,8 @@ class CommonValidation:
                 values_condition = (operator in ('In', 'NotIn')) == bool(expression.get('values'))
                 if not values_condition:
                     module.fail_json(msg="If in any selector.match_expressions operator is 'In' or 'NotIn', the values "
-                                         "array must be non-empty. If operator is 'Exists' or 'DoesNotExist', the values "
-                                         "array must be empty.")
+                                         "array must be non-empty. If operator is 'Exists' or 'DoesNotExist', the "
+                                         "values array must be empty.")
             match_labels = k8s_definition['spec']['selector'].get('matchLabels', dict())
             if not Validators.string_string_dict(match_labels):
                 module.fail_json(msg="Selector.match_labels should be map[string]string")

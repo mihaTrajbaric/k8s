@@ -1013,6 +1013,9 @@ def validate(module, k8s_definition):
     CommonValidation.metadata(module, k8s_definition)
     CommonValidation.selector(module, k8s_definition)
 
+    if not Validators.dns_subdomain(k8s_definition['metadata']['name']):
+        module.fail_json(msg=f"'name' {Validators.dns_subdomain_msg}")
+
     strategy = k8s_definition.get('spec').get('strategy')
     if strategy and strategy['type'] == 'Recreate' and 'rollingUpdate' in strategy.keys():
         module.fail_json(msg="strategy.max_surge and strategy.max_unavailable can only be present "

@@ -158,6 +158,9 @@ def validate(module, k8s_definition):
 
     CommonValidation.metadata(module, k8s_definition)
 
+    if not Validators.dns_subdomain(k8s_definition['metadata']['name']):
+        module.fail_json(msg=f"'name' {Validators.dns_subdomain_msg}")
+
     data = k8s_definition.get('data', dict())
     binary_data = k8s_definition.get('binaryData', dict())
 
