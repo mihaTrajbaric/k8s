@@ -167,8 +167,8 @@ def validate(module, k8s_definition):
     data = k8s_definition.get('data', dict())
     string_data = k8s_definition.get('stringData', dict())
 
-    data_keys_valid = all([Validators.alnum_ext(key) for key in data.keys()])
-    string_data_keys_valid = all([Validators.alnum_ext(key) for key in string_data.keys()])
+    data_keys_valid = all([Validators.config_map_key(key) for key in data.keys()])
+    string_data_keys_valid = all([Validators.config_map_key(key) for key in string_data.keys()])
 
     if not data_keys_valid:
         module.fail_json(msg="Keys in data must consist of alphanumeric characters, '-', '_' or '.'")

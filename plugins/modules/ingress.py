@@ -166,7 +166,7 @@ EXAMPLES = r'''
     default_backend_service:
       name: default-service
       port: 8080
-      
+
 - name: Ingress with prefix path
   sodalite.k8s.ingress:
     name: ingress-path
@@ -248,7 +248,6 @@ from ansible_collections.sodalite.k8s.plugins.module_utils.helper import clean_d
 
 
 def definition(params):
-    # TODO
 
     def get_port(port, _type):
         """

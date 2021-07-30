@@ -164,8 +164,8 @@ def validate(module, k8s_definition):
     data = k8s_definition.get('data', dict())
     binary_data = k8s_definition.get('binaryData', dict())
 
-    data_keys_valid = all([Validators.alnum_ext(key) for key in data.keys()])
-    binary_data_keys_valid = all([Validators.alnum_ext(key) for key in binary_data.keys()])
+    data_keys_valid = all([Validators.config_map_key(key) for key in data.keys()])
+    binary_data_keys_valid = all([Validators.config_map_key(key) for key in binary_data.keys()])
     keys_unique = len(set(list(data.keys()) + list(binary_data.keys()))) == len(data.keys()) + len(binary_data.keys())
 
     if not data_keys_valid:

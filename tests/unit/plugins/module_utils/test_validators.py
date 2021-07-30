@@ -5,13 +5,13 @@ __metaclass__ = type
 from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators
 
 
-def test_alnum_ext():
-    assert Validators.alnum_ext('foo-bar')
-    assert Validators.alnum_ext('foo_bar')
-    assert Validators.alnum_ext('foo.bar')
-    assert Validators.alnum_ext('FooBar')
-    assert Validators.alnum_ext('Foo.Bar-foo_bar')
-    assert not Validators.alnum_ext('#foo+bar')
+def test_config_map_key():
+    assert Validators.config_map_key('foo-bar')
+    assert Validators.config_map_key('foo_bar')
+    assert Validators.config_map_key('foo.bar')
+    assert Validators.config_map_key('FooBar')
+    assert Validators.config_map_key('Foo.Bar-foo_bar')
+    assert not Validators.config_map_key('#foo+bar')
 
 
 def test_dns_subdomain():
@@ -21,6 +21,16 @@ def test_dns_subdomain():
     assert not Validators.dns_subdomain("ab3d_a")
     assert Validators.dns_subdomain("3abd2a2")
     assert Validators.dns_subdomain("foo-bar.foo-35-bar")
+
+
+def test_dns_subdomain_wildcard():
+    assert Validators.dns_subdomain_wildcard('a' * 253)
+    assert not Validators.dns_subdomain_wildcard('a' * 254)
+    assert Validators.dns_subdomain_wildcard('foo.bar.com')
+    assert Validators.dns_subdomain_wildcard('*.foo.bar.com')
+    assert not Validators.dns_subdomain_wildcard('**.foo.bar.com')
+    assert not Validators.dns_subdomain_wildcard('a*.foo.bar.com')
+    assert not Validators.dns_subdomain_wildcard('*')
 
 
 def test_dns_label():

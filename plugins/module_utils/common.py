@@ -25,13 +25,6 @@ class Base64:
             return False
 
 
-class Quantity:
-
-    @staticmethod
-    def validate():
-        pass
-
-
 class Marshalling:
 
     @staticmethod
@@ -49,12 +42,12 @@ class Marshalling:
 class Validators:
 
     @staticmethod
-    def alnum_ext(value):
+    def config_map_key(key):
         """
-        validates that value consist only of alphanumeric characters, '-', '_' or '.'.
+        validates that key consist only of alphanumeric characters, '-', '_' or '.'.
         """
         regex = re.compile(r'^[a-zA-Z0-9_.-]+$')
-        return bool(regex.match(str(value)))
+        return bool(regex.match(str(key)))
 
     dns_subdomain_msg = "should be a lowercase DNS-1123 subdomain. It must consist of lower case alphanumeric " \
                         "characters, '-' or '.', and must start and end with an alphanumeric character."
@@ -177,7 +170,7 @@ class Validators:
         - contains only alphanumeric characters or '_'
         - starts with alphabetic character or '_'
         """
-        regex = re.compile(r'[A-Za-z_][A-Za-z0-9_]*$')
+        regex = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
         return bool(regex.match(str(value)))
 
     url_path_msg = "should be URL path (RFC 3986). It must start with '/', must not contain '//', '/./', '/../' and " \
