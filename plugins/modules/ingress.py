@@ -157,43 +157,48 @@ seealso:
 author:
     - Mihael Trajbarič (@mihaTrajbaric)
 '''
-# TODO example
+
 EXAMPLES = r'''
-# Create new Secret
-- name: Secret for xOpera rest api
-  sodalite.k8s.secret:
-    name: xOpera-secret
-    data:
-      db_ip: cG9zdGdyZXMtc2VydmljZQ==
-# Replace Secret
-- name: Secret for xOpera rest api
-  sodalite.k8s.secret:
-    name: xOpera-secret
+- name: Create simple ingress with default backend
+  sodalite.k8s.ingress:
+    name: ingress-minimal
     state: present
-    type: Opaque
-    force: yes
-    data:
-      db_ip: bXlzcWwtc2VydmljZQ==
-# Create secret with string data
-- name: String Secret
-  sodalite.k8s.secret:
-    name: string-secret
-    string_data:
-      db_ip: postgres-service
-# Create secret with metadata
-- name: Labels and annotations
-  sodalite.k8s.secret:
-    name: xOpera-secret
-    labels:
-      app: postgres
-    annotations:
-      type: my_secret
-    data:
-      db_ip: cG9zdGdyZXMtc2VydmljZQ==
-# Remove secret
-- name: Secret for xOpera rest api
-  sodalite.k8s.secret:
-    name: xOpera-secret
+    default_backend_service:
+      name: default-service
+      port: 8080
+      
+- name: Ingress with prefix path
+  sodalite.k8s.ingress:
+    name: ingress-path
+    state: present
+    rules:
+    - host: foo.bar.com
+      paths:
+        - path: /testpath
+          path_type: Prefix
+          backend_service:
+             name: test
+             port: 80
+
+- name: Ingress with TLS configuration
+  sodalite.k8s.ingress:
+    name: ingress-tls
+    state: present
+    rules:
+    - host: https-foo.bar.com
+      paths:
+        - path: /testpath
+          path_type: Prefix
+          backend_service:
+             name: service1
+             port: app-port
+    tls:
+      - hosts: ['https-foo.bar.com']
+        secret: secret-tls
+
+- name: State absent
+  sodalite.k8s.ingress:
+    name: ingress-test
     state: absent
 '''
 

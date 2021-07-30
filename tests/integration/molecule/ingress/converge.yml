@@ -1,0 +1,139 @@
+---
+- name: Converge
+  collections:
+    - sodalite.k8s
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Minimal example
+      sodalite.k8s.ingress:
+        name: ingress-minimal
+        state: present
+        default_backend_service:
+          name: default-service
+          port: 8080
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.failed == false
+          - result.result.apiVersion == 'networking.k8s.io/v1'
+          - result.result.kind == 'Ingress'
+          - result.result.metadata.name == 'ingress-minimal'
+          - result.result.metadata.namespace == 'default'
+          - result.result.spec.defaultBackend.service.name == 'default-service'
+          - result.result.spec.defaultBackend.service.port.number == 8080
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: networking.k8s.io/v1
+        kind: Ingress
+        name: ingress-minimal
+        namespace: default
+      register: result
+
+    - assert:
+        that:
+          - "{{ result.resources | length == 1 }}"
+          - result.resources[0].metadata.name == 'ingress-minimal'
+
+    - name: Idempotency
+      sodalite.k8s.ingress:
+        name: ingress-minimal
+        state: present
+        default_backend_service:
+          name: default-service
+          port: 8080
+      register: result
+
+    - assert:
+        that:
+          - result is not changed
+
+    - name: Delete minimal example
+      sodalite.k8s.ingress:
+        name: ingress-minimal
+        state: absent
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'
+
+    - name: Ensure example is really not on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: networking.k8s.io/v1
+        kind: Ingress
+        name: ingress-started
+        namespace: default
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 0}}"
+
+    - name: Test Full example
+      sodalite.k8s.ingress:
+        name: ingress-full
+        state: present
+        ingress_class_name: ingress-class-name
+        default_backend_service:
+          name: default-backend-service
+          port: 8080
+        rules:
+          - host: foo.bar.com
+            paths:
+              - path: /
+                path_type: Exact
+                backend_service:
+                  name: my-backend-service
+                  port: my-port
+        tls:
+          - hosts: ['foo.bar.com']
+            secret: my-tls-secret
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.failed == false
+          - result.result.apiVersion == 'networking.k8s.io/v1'
+          - result.result.kind == 'Ingress'
+          - result.result.metadata.name == 'ingress-full'
+          - result.result.spec.defaultBackend.service.name == 'default-backend-service'
+          - result.result.spec.defaultBackend.service.port.number == 8080
+          - "{{ result.result.spec.rules | length == 1 }}"
+          - result.result.spec.rules[0].host == "foo.bar.com"
+          - "{{ result.result.spec.rules[0].http.paths | length == 1 }}"
+          - result.result.spec.rules[0].http.paths[0].path == '/'
+          - result.result.spec.rules[0].http.paths[0].pathType == 'Exact'
+          - result.result.spec.rules[0].http.paths[0].backend.service.name == "my-backend-service"
+          - result.result.spec.rules[0].http.paths[0].backend.service.port.name == 'my-port'
+
+
+    - name: Ensure example is really on the kubernetes cluster
+      kubernetes.core.k8s_info:
+        api_version: networking.k8s.io/v1
+        kind: Ingress
+        name: ingress-full
+        namespace: default
+      register: results
+
+    - assert:
+        that:
+          - "{{ results.resources | length == 1 }}"
+          - results.resources[0].metadata.name == 'ingress-full'
+
+    - name: Delete full example
+      sodalite.k8s.ingress:
+        name: ingress-full
+        state: absent
+      register: result
+
+    - assert:
+        that:
+          - result is changed
+          - result.method == 'delete'
