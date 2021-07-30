@@ -420,13 +420,14 @@ result:
 from ansible_collections.sodalite.k8s.plugins.module_utils.ansiblemodule import AnsibleModule
 from ansible_collections.sodalite.k8s.plugins.module_utils.args_common import (update_arg_spec,
                                                                                UPDATE_MUTUALLY_EXCLUSIVE)
-from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators, CommonValidation
+from ansible_collections.sodalite.k8s.plugins.module_utils.common import Validators, CommonValidation, Marshalling
 from ansible_collections.sodalite.k8s.plugins.module_utils.helper import clean_dict
 
 from copy import deepcopy
 
 
 def definition(params):
+
     body = {
         "apiVersion": "v1",
         "kind": "Service",
@@ -440,11 +441,7 @@ def definition(params):
             'ports': [
                 {
                     'port': port_obj.get('port'),
-
-                    'targetPort': int(port_obj.get('target_port'))      # this code would be much prettier with
-                    if (port_obj.get('target_port') or "").isdigit()    # Walrus operator, added in python 3.8
-                    else port_obj.get('target_port'),
-
+                    'targetPort': Marshalling.unmarshall_int_or_string(port_obj.get('target_port')),
                     'protocol': port_obj.get('protocol'),
                     'name': port_obj.get('name'),
                     'nodePort': port_obj.get('node_port'),
@@ -478,7 +475,6 @@ def definition(params):
 
 
 def validate(module, k8s_definition):
-
     CommonValidation.metadata(module, k8s_definition)
     # for some reason, name should be a RFC 1035 Label Names
     if not Validators.dns_label_1035(k8s_definition['metadata']['name']):

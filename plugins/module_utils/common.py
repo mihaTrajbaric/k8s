@@ -32,6 +32,20 @@ class Quantity:
         pass
 
 
+class Marshalling:
+
+    @staticmethod
+    def unmarshall_int_or_string(data):
+        """
+        unmarshalls kubernetes datatype 'IntOrString'
+        if data could be int, it is converted to int, otherwise stays as str
+        """
+        # isdigit() does not work on None
+        if (data or "").isdigit():
+            return int(data)
+        return data
+
+
 class Validators:
 
     @staticmethod
@@ -42,7 +56,7 @@ class Validators:
         regex = re.compile(r'^[a-zA-Z0-9_.-]+$')
         return bool(regex.match(str(value)))
 
-    dns_subdomain_msg = "should be a valid lowercase RFC 1123 subdomain. It must consist of lower case alphanumeric " \
+    dns_subdomain_msg = "should be a lowercase DNS-1123 subdomain. It must consist of lower case alphanumeric " \
                         "characters, '-' or '.', and must start and end with an alphanumeric character."
 
     @staticmethod
@@ -64,7 +78,23 @@ class Validators:
         last_char_alnum = value[-1].isalnum()
         return length_valid and second_constraint and first_char_alnum and last_char_alnum
 
-    dns_label_1123_msg = "should be a valid lowercase RFC 1123 DNS Label Name. It must not be longer then 63 " \
+    dns_subdomain_wildcard_msg = "should be a DNS-1123 subdomain or wildcard DNS-1123 subdomain. It starts with " \
+                                 "optional prefix '*.' followed by a valid DNS subdomain, which must consist of " \
+                                 "lower case alphanumeric characters, '-' or '.' and end with an alphanumeric character"
+
+    @staticmethod
+    def dns_subdomain_wildcard(value):
+        """
+        validates that value is a valid DNS Subdomain Name (RFC 1123) with wildcard prefix
+        ("*" + dns_subdomain or dns_subdomain)
+        """
+        if value is None:
+            return True
+        if '*.' in value:
+            return Validators.dns_subdomain(value[2:])
+        return Validators.dns_subdomain(value)
+
+    dns_label_1123_msg = "should be a lowercase DNS-1123 Label Name. It must not be longer then 63 " \
                          "characters, must consist of lower case alphanumeric characters or '-' and must start and " \
                          "end with an alphanumeric character"
 
@@ -87,7 +117,7 @@ class Validators:
         last_char_alnum = value[-1].isalnum()
         return length_valid and second_constraint and first_char_alnum and last_char_alnum
 
-    dns_label_1035_msg = "should be a valid lowercase RFC 1135 DNS Label Name. It must not be longer then 63 " \
+    dns_label_1035_msg = "should be a lowercase DNS-1135 Label Name. It must not be longer then 63 " \
                          "characters, must consist of lower case alphanumeric characters or '-' must start with " \
                          "alphabetic character and end with an alphanumeric character."
 
@@ -149,6 +179,31 @@ class Validators:
         """
         regex = re.compile(r'[A-Za-z_][A-Za-z0-9_]*$')
         return bool(regex.match(str(value)))
+
+    url_path_msg = "should be URL path (RFC 3986). It must start with '/', must not contain '//', '/./', '/../' and " \
+                   "must not end with '/..', '/.'"
+
+    @staticmethod
+    def url_path(path):
+        """
+        Ensures path is a valid "path part of URL as defined by RFC 3986"
+        - starts with /
+        - must not contain any of ["//", "/./", "/../", "%2f", "%2F"]
+        - most not end with ["/..", "/."]
+        """
+        if path is None:
+            return None
+        if path[0] != '/':
+            return False
+        invalid_path_sequences = ["//", "/./", "/../", "%2f", "%2F"]
+        invalid_path_suffixes = ["/..", "/."]
+        for inv_seq in invalid_path_sequences:
+            if inv_seq in path:
+                return False
+        for inv_suff in invalid_path_suffixes:
+            if path.endswith(inv_suff):
+                return False
+        return True
 
     @staticmethod
     def string_string_dict(_dict):
