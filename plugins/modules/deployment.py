@@ -197,7 +197,7 @@ options:
                         type: str
                     config_map:
                         description:
-                        - Selects a key of a ConfigMap.
+                        - Selects a key of a Deployment.
                         type: dict
                         suboptions:
                             key:
@@ -212,7 +212,7 @@ options:
                                 type: str
                             optional:
                                 description:
-                                - Specify whether the ConfigMap or its key must be defined.
+                                - Specify whether the Deployment or its key must be defined.
                                 type: bool
                     secret:
                         description:
@@ -247,8 +247,8 @@ options:
                 suboptions:
                     config_map:
                         description:
-                        - The ConfigMap to select from.
-                        - The contents of the target ConfigMap's Data field will represent the key-value pairs as
+                        - The Deployment to select from.
+                        - The contents of the target Deployment's Data field will represent the key-value pairs as
                           environment variables.
                         type: dict
                         suboptions:
@@ -260,11 +260,11 @@ options:
                                 required: true
                             optional:
                                 description:
-                                - Specify whether the ConfigMap must be defined.
+                                - Specify whether the Deployment must be defined.
                                 type: bool
                     prefix:
                         description:
-                        - An optional identifier to prepend to each key in the ConfigMap.
+                        - An optional identifier to prepend to each key in the Deployment.
                         - Must be a C_IDENTIFIER.
                         type: str
                     secret:
@@ -433,11 +433,11 @@ options:
                         default: false
             config_map:
                 description:
-                - Adapts a ConfigMap into a volume.
-                - The contents of the target ConfigMap's Data field will be presented in a volume as files using the
+                - Adapts a Deployment into a volume.
+                - The contents of the target Deployment's Data field will be presented in a volume as files using the
                   keys in the C(Data) field as the file names, unless the items element is populated with specific
                   mappings of keys to paths.
-                - ConfigMap volumes support ownership management and SELinux relabeling.
+                - Deployment volumes support ownership management and SELinux relabeling.
                 type: dict
                 suboptions:
                     name:
@@ -447,7 +447,7 @@ options:
                         type: str
                     optional:
                         description:
-                        - Specify whether the ConfigMap or its keys must be defined.
+                        - Specify whether the Deployment or its keys must be defined.
                         type: bool
                     default_mode:
                         description:
@@ -460,11 +460,11 @@ options:
                         default: 0644
                     items:
                         description:
-                        - If unspecified, each key-value pair in the Data field of the referenced ConfigMap will be
+                        - If unspecified, each key-value pair in the Data field of the referenced Deployment will be
                           projected into the volume as a file whose name is the key and content is the value.
                         - If specified, the listed keys will be projected into the specified paths, and unlisted keys
                           will not be present.
-                        - If a key is specified which is not present in the ConfigMap, the volume setup will error
+                        - If a key is specified which is not present in the Deployment, the volume setup will error
                           unless it is marked optional.
                         - Paths must be relative and may not contain the '..' path or start with '..'.
                         type: list
@@ -615,8 +615,12 @@ options:
 
 seealso:
 - name: K8s Deployment documentation
-  description: Complete deployment documentation on kubernetes website
+  description: Documentation about Deployment concept on kubernetes website
   link: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+- name: K8s Deployment API reference
+  description: API reference for K8s Deployment resource on kubernetes website
+  link: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/
+
 
 author:
     - Mihael Trajbarič (@mihaTrajbaric)
@@ -924,7 +928,7 @@ def definition(params):
                                 {
                                     'name': env_var.get('name'),
                                     'valueFrom': {
-                                        'configMapKeyRef': env_var.get('config_map'),
+                                        'DeploymentKeyRef': env_var.get('config_map'),
                                         'secretKeyRef': env_var.get('secret'),
                                     },
                                     'value': env_var.get('value')
@@ -933,7 +937,7 @@ def definition(params):
                             ],
                             'envFrom': [
                                 {
-                                    'configMapRef': env_from_item.get('config_map'),
+                                    'DeploymentRef': env_from_item.get('config_map'),
                                     'prefix': env_from_item.get('prefix'),
                                     'secretRef': env_from_item.get('secret'),
                                 }
@@ -973,7 +977,7 @@ def definition(params):
                                 'claimName': (volume.get('pvc') or {}).get('claim_name'),
                                 'readOnly': (volume.get('pvc') or {}).get('read_only')
                             },
-                            'configMap': {
+                            'Deployment': {
                                 'name': (volume.get('config_map') or {}).get('name'),
                                 'optional': (volume.get('config_map') or {}).get('optional'),
                                 'defaultMode': (volume.get('config_map') or {}).get('default_mode'),
@@ -1056,14 +1060,14 @@ def validate(module, k8s_definition):
                 module.fail_json(msg=f"containers[{i}].env[{j}].name {Validators.c_identifier_msg}")
             modes = [
                 'value' in env_var,
-                'configMapKeyRef' in env_var.get('valueFrom', {}),
+                'DeploymentKeyRef' in env_var.get('valueFrom', {}),
                 'secretKeyRef' in env_var.get('valueFrom', {})
             ]
             if sum(modes) != 1:
                 module.fail_json(msg=f"More then one value source in containers[{i}].env[{j}]. "
                                      f"Only one of (value, config_map, secret) can be present.")
 
-            if not Validators.dns_subdomain(env_var.get('valueFrom', {}).get('configMapKeyRef', {}).get('name')):
+            if not Validators.dns_subdomain(env_var.get('valueFrom', {}).get('DeploymentKeyRef', {}).get('name')):
                 module.fail_json(msg=f"containers[{i}].env[{j}].config_map.name {Validators.dns_subdomain_msg}")
 
             if not Validators.dns_subdomain(env_var.get('valueFrom', {}).get('secretKeyRef', {}).get('name')):
@@ -1071,14 +1075,14 @@ def validate(module, k8s_definition):
 
         for j, env_from_item in enumerate(container.get('envFrom', list())):
             modes = [
-                'configMapRef' in env_from_item,
+                'DeploymentRef' in env_from_item,
                 'secretRef' in env_from_item
             ]
             if sum(modes) != 1:
                 module.fail_json(msg=f"More then one value source in containers[{i}].env_from[{j}]. "
                                      f"Only one of (config_map, secret) can be present.")
 
-            if not Validators.dns_subdomain(env_from_item.get('configMapRef', {}).get('name')):
+            if not Validators.dns_subdomain(env_from_item.get('DeploymentRef', {}).get('name')):
                 module.fail_json(msg=f"containers[{i}].env_from[{j}].config_map.name {Validators.dns_subdomain_msg}")
 
             if not Validators.dns_subdomain(env_from_item.get('secretRef', {}).get('name')):
@@ -1127,7 +1131,7 @@ def validate(module, k8s_definition):
 
         modes = [
             'persistentVolumeClaim' in volume,
-            'configMap' in volume,
+            'Deployment' in volume,
             'secret' in volume
         ]
         if sum(modes) != 1:

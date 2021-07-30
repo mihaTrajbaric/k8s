@@ -96,8 +96,11 @@ options:
 
 seealso:
 - name: K8s StorageClass documentation
-  description: Complete storage class documentation on kubernetes website
+  description: Documentation about StorageClass concept on kubernetes website
   link: https://kubernetes.io/docs/concepts/storage/storage-classes/
+- name: K8s StorageClass API reference
+  description: API reference for K8s StorageClass resource on kubernetes website
+  link: https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/storage-class-v1/
 
 
 author:

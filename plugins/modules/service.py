@@ -250,8 +250,11 @@ options:
 
 seealso:
 - name: K8s Service documentation
-  description: Complete service documentation on kubernetes website
+  description: Documentation about Service concept on kubernetes website
   link: https://kubernetes.io/docs/concepts/services-networking/service/
+- name: K8s Service API reference
+  description: API reference for K8s Service resource on kubernetes website
+  link: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
 
 author:
     - Mihael Trajbarič (@mihaTrajbaric)

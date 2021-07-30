@@ -51,6 +51,14 @@ options:
         type: str
         default: Opaque
 
+seealso:
+- name: K8s Secret documentation
+  description: Documentation about Secrets on kubernetes website
+  link: https://kubernetes.io/docs/concepts/configuration/secret/
+- name: K8s Secret API reference
+  description: API reference for K8s Secret resource on kubernetes website
+  link: https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/secret-v1/
+
 author:
     - Mihael Trajbarič (@mihaTrajbaric)
 '''

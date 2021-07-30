@@ -48,6 +48,14 @@ options:
         type: bool
         default: false
 
+seealso:
+- name: K8s ConfigMap documentation
+  description: Documentation about K8s ConfigMap resource on kubernetes website
+  link: https://kubernetes.io/docs/concepts/configuration/configmap/
+- name: K8s ConfigMap API reference
+  description: API reference for K8s ConfigMap resource on kubernetes website
+  link: https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/config-map-v1/
+
 author:
     - Mihael Trajbarič (@mihaTrajbaric)
 '''

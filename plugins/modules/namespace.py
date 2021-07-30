@@ -30,6 +30,9 @@ seealso:
 - name: K8s Namespace documentation
   description: Complete namespace documentation on kubernetes website
   link: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/
+- name: K8s Namespace API reference
+  description: API reference for K8s Namespace resource on kubernetes website
+  link: https://kubernetes.io/docs/reference/kubernetes-api/cluster-resources/namespace-v1/
 
 author:
     - Mihael Trajbarič (@mihaTrajbaric)

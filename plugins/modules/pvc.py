@@ -109,6 +109,13 @@ options:
         choices: [Filesystem, Block]
         default: Filesystem
 
+seealso:
+- name: K8s PersistentVolumeClaim documentation
+  description: Documentation on Persistent Volumes on kubernetes website
+  link: https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+- name: K8s PersistentVolumeClaim API reference
+  description: API reference for K8s PersistentVolumeClaim resource on kubernetes website
+  link: https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-claim-v1/
 
 author:
     - Mihael Trajbarič (@mihaTrajbaric)
