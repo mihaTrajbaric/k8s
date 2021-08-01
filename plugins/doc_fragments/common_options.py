@@ -17,7 +17,7 @@ options:
     name:
         description:
         - Use to specify an object name.
-        - Use to create, delete, or discover an object without providing a full resource definition.
+        - Use to create or delete an object without providing a full resource definition.
         - Use in conjunction with I(namespace) to identify a specific object.
         type: str
         required: True
