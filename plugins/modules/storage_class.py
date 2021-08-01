@@ -19,7 +19,7 @@ description: Creates k8s PersistentVolumeClaim, which describes the parameters f
              created they cannot be patched.
 
 extends_documentation_fragment:
-    - sodalite.k8s.common_options
+    - sodalite.k8s.common_options_no_namespace
     - sodalite.k8s.metadata_options
     - kubernetes.core.k8s_auth_options
     - kubernetes.core.k8s_wait_options
@@ -29,6 +29,7 @@ options:
     provisioner:
         description:
         - Indicates the type of the provisioner.
+        - See a list of provisioners U(https://kubernetes.io/docs/concepts/storage/storage-classes/#provisioner)
         type: str
         required: true
     allow_volume_expansion:
@@ -68,6 +69,7 @@ options:
     parameters:
         description:
         - Holds the parameters for the provisioner that should create volumes of this storage class.
+        - Depends on the provisioner.
         type: dict
     reclaim_policy:
         description:
@@ -107,62 +109,44 @@ author:
     - Mihael Trajbarič (@mihaTrajbaric)
 '''
 
-# TODO
 EXAMPLES = r'''
-# Create PersistentVolumeClaim
-- name: Create simple PersistentVolumeClaim
-  sodalite.k8s.pvc:
-    name: pvc-test
+- name: Create local StorageClass
+  sodalite.k8s.storage_class:
+    name: storage-class-local
     state: present
-    access_modes:
-        - ReadWriteMany
-        - ReadWriteOnce
-    storage_request: 5Gi
+    provisioner: kubernetes.io/no-provisioner
+    volume_binding_mode: WaitForFirstConsumer
 
-# Create PersistentVolumeClaim with match_expressions
-- name: PersistentVolumeClaim with matchExpressions selector
-  sodalite.k8s.pvc:
-    name: pvc-test
+- name: StorageClass with allowed topologies
+  sodalite.k8s.storage_class:
+    name: allowed-topologies
     state: present
-    selector:
-        match_expressions:
-          - key: app-volume
-            operator: In
-            values: [postgres, mysql]
-    access_modes:
-        - ReadWriteMany
-        - ReadWriteOnce
-    storage_request: 5Gi
+    provisioner: kubernetes.io/gce-pd
+    parameters:
+      type: pd-standard
+    volume_binding_mode: WaitForFirstConsumer
+    allowed_topologies:
+      - key: failure-domain.beta.kubernetes.io/zone
+        values:
+          - us-central1-a
+          - us-central1-b
 
-# Create PersistentVolumeClaim with match_labels
-- name: PersistentVolumeClaim with matchLabels selector
-  sodalite.k8s.pvc:
-    name: pvc-test
+- name: AWS EBS StorageClass with volume expansion
+  sodalite.k8s.storage_class:
+    name: aws-ebs
     state: present
-    selector:
-        match_labels:
-          app-volume: postgres
-    access_modes:
-        - ReadWriteMany
-        - ReadWriteOnce
-    storage_request: 5Gi
+    provisioner: kubernetes.io/aws-ebs
+    parameters:
+      type: io1
+      iopsPerGB: "10"
+      fsType: ext4
+    allow_volume_expansion: yes
 
-# Create PersistentVolumeClaim with ResourceRequirements
-- name: PersistentVolumeClaim with storage_request and storage_limit
-  sodalite.k8s.pvc:
-    name: pvc-test
-    state: present
-    access_modes:
-        - ReadWriteMany
-        - ReadWriteOnce
-    storage_request: 5Gi
-    storage_limit: 10Gi
-
-# Remove PersistentVolumeClaim
-- name: Remove pvc
-  sodalite.k8s.pvc:
-    name: pvc-test
+- name: Remove StorageClass
+  sodalite.k8s.storage_class:
+    name: storage-class-local
     state: absent
+    provisioner: kubernetes.io/no-provisioner
 '''
 
 RETURN = r'''
@@ -245,8 +229,9 @@ def validate(module, k8s_definition):
 
 
 def main():
-    # TODO no namespace!!!
     argspec = common_arg_spec()
+    # StorageClass is not namespaced object
+    argspec.pop('namespace')
     argspec.update(dict(
         provisioner=dict(type='str', required=True),
         allow_volume_expansion=dict(type='bool'),
@@ -259,12 +244,8 @@ def main():
         reclaim_policy=dict(type='str', choices=['Retain', 'Delete', 'Recycle'], default='Delete'),
         volume_binding_mode=dict(type='str', choices=['Immediate', 'WaitForFirstConsumer'], default='Immediate'),
     ))
-    # required_if = [
-    #     ('state', 'present', ('provisioner',))
-    # ]
 
     module = AnsibleModule(argument_spec=argspec,
-                           # required_if=required_if,
                            supports_check_mode=True)
     from ansible_collections.sodalite.k8s.plugins.module_utils.k8s_connector import execute_module
 
