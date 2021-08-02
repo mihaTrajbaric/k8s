@@ -31,6 +31,7 @@ options:
         - If I(state=present), at least 1 access_mode should be specified.
         type: list
         elements: str
+        choices: [ ReadWriteOnce, ReadOnlyMany, ReadWriteMany ]
     selector:
         description:
         - A label query over a set of resources.
@@ -265,11 +266,6 @@ def validate(module, k8s_definition):
     if not access_modes:
         module.fail_json(msg="Access_modes should have at least 1 element")
 
-    access_modes_valid = all([item in ('ReadWriteOnce', 'ReadOnlyMany', 'ReadWriteMany') for item in access_modes])
-    if not access_modes_valid:
-        module.fail_json(msg="Elements of access_modes should be chosen from "
-                             "('ReadWriteOnce', 'ReadOnlyMany', 'ReadWriteMany')")
-
     if 'resources' in k8s_definition['spec'].keys():
         limits = k8s_definition['spec']['resources'].get('limits', dict())
         if not Validators.string_quantity_dict(limits):
@@ -283,7 +279,7 @@ def validate(module, k8s_definition):
 def main():
     argspec = common_arg_spec()
     argspec.update(dict(
-        access_modes=dict(type='list', elements='str'),
+        access_modes=dict(type='list', elements='str', choices=['ReadWriteOnce', 'ReadOnlyMany', 'ReadWriteMany']),
         selector=dict(type='dict', options=dict(
             match_labels=dict(type='dict'),
             match_expressions=dict(type='list', elements='dict', options=dict(
