@@ -481,9 +481,8 @@ class TestValid:
         with patch.object(CommonValidation, 'metadata', return_value=None) as mock_metadata:
             validate(module, full_def)
             assert mock_metadata.call_count == 2, mock_metadata.call_count
-            assert mock_metadata.mock_calls == \
-                   [call(module, full_def), call(module, full_def['spec']['template'])], \
-                mock_metadata.mock_calls
+            assert mock_metadata.mock_calls == [call(module, full_def), call(module, full_def['spec']['template'])], \
+                   mock_metadata.mock_calls
 
     @staticmethod
     def test_validate_selector():
