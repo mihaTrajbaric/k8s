@@ -359,7 +359,7 @@ def validate(module, k8s_definition):
 
     for i, tls_conf in enumerate(spec.get('tls', list())):
         if not Validators.dns_subdomain(tls_conf.get('secretName')):
-            module.fail_json(f"tls[{i}].secret {Validators.dns_subdomain_msg}")
+            module.fail_json(msg=f"tls[{i}].secret {Validators.dns_subdomain_msg}")
 
 
 def main():

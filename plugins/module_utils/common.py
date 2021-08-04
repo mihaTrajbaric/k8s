@@ -185,7 +185,7 @@ class Validators:
         - most not end with ["/..", "/."]
         """
         if path is None:
-            return None
+            return True
         if path[0] != '/':
             return False
         invalid_path_sequences = ["//", "/./", "/../", "%2f", "%2F"]
