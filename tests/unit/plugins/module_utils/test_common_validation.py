@@ -44,7 +44,7 @@ def test_metadata_fail1():
     }
     CommonValidation.metadata(module, k8s_def)
     module.fail_json.assert_called_once()
-    assert 'annotations' in module.fail_json.call_args.kwargs['msg'].lower()
+    assert 'annotations' in module.fail_json.call_args[1]['msg'].lower()
 
 
 def test_metadata_fail2():
@@ -64,7 +64,7 @@ def test_metadata_fail2():
     }
     CommonValidation.metadata(module, k8s_def)
     module.fail_json.assert_called_once()
-    assert 'labels' in module.fail_json.call_args.kwargs['msg'].lower()
+    assert 'labels' in module.fail_json.call_args[1]['msg'].lower()
 
 
 selector_def = {
@@ -93,7 +93,7 @@ def test_selector_wrong_operator():
 
     CommonValidation.selector(module, test_def)
     module.fail_json.assert_called()
-    assert 'operator' in module.fail_json.call_args.kwargs['msg'].lower()
+    assert 'operator' in module.fail_json.call_args[1]['msg'].lower()
 
 
 def test_selector_empty_values():
@@ -104,7 +104,7 @@ def test_selector_empty_values():
 
     CommonValidation.selector(module, test_def)
     module.fail_json.assert_called()
-    fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+    fail_msg = module.fail_json.call_args[1]['msg'].lower()
     assert 'non-empty' in fail_msg
     assert 'values' in fail_msg
 
@@ -117,7 +117,7 @@ def test_selector_exists_and_not_empty_values():
 
     CommonValidation.selector(module, test_def)
     module.fail_json.assert_called()
-    fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+    fail_msg = module.fail_json.call_args[1]['msg'].lower()
     assert 'empty' in fail_msg
     assert 'values' in fail_msg
 
@@ -130,5 +130,5 @@ def test_selector_match_labels_wrong_type():
 
     CommonValidation.selector(module, test_def)
     module.fail_json.assert_called()
-    fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+    fail_msg = module.fail_json.call_args[1]['msg'].lower()
     assert 'map[string]string' in fail_msg

@@ -253,7 +253,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'dns-1135 label name' in fail_msg, fail_msg
 
     @staticmethod
@@ -263,7 +263,7 @@ class TestValid:
         test_def['spec']['selector'] = dict(app='a')
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'selector' in fail_msg, fail_msg
         assert "not allowed with type='ExternalName'" in fail_msg, fail_msg
 
@@ -275,7 +275,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'map[string]string' in fail_msg, fail_msg
 
     @staticmethod
@@ -286,7 +286,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'at least one element' in fail_msg, fail_msg
 
     @staticmethod
@@ -297,7 +297,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'valid port number' in fail_msg, fail_msg
 
     @staticmethod
@@ -308,7 +308,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'valid port number' in fail_msg, fail_msg
 
     @staticmethod
@@ -319,7 +319,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'valid IANA_SVC_NAME' in fail_msg, fail_msg
 
     @staticmethod
@@ -330,7 +330,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'duplicate port name' in fail_msg, fail_msg
 
     @staticmethod
@@ -341,7 +341,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'dns-1123 label name' in fail_msg, fail_msg
 
     @staticmethod
@@ -353,7 +353,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'name is not set' in fail_msg, fail_msg
 
     @staticmethod
@@ -364,7 +364,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'valid port number' in fail_msg, fail_msg
 
     @staticmethod
@@ -374,7 +374,7 @@ class TestValid:
         test_def['spec']['ipFamilies'] = ['IPv4', 'IPv6']
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'ip_families' in fail_msg, fail_msg
         assert "not allowed with type='ExternalName'" in fail_msg, fail_msg
 
@@ -385,7 +385,7 @@ class TestValid:
         test_def['spec']['ipFamilyPolicy'] = 'RequireDualStack'
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'ip_families_policy' in fail_msg, fail_msg
         assert "not allowed with type='ExternalName'" in fail_msg, fail_msg
 
@@ -399,7 +399,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'maximum of two entries' in fail_msg, fail_msg
 
     @staticmethod
@@ -412,7 +412,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'more than once' in fail_msg, fail_msg
 
     @staticmethod
@@ -425,7 +425,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert "must be set to 'RequireDualStack' or 'PreferDualStack'" in fail_msg, fail_msg
 
     @staticmethod
@@ -435,7 +435,7 @@ class TestValid:
         test_def['spec']['clusterIP'] = '192.168.1.1'
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'cluster_ip' in fail_msg, fail_msg
         assert "not allowed with type='ExternalName'" in fail_msg, fail_msg
 
@@ -446,7 +446,7 @@ class TestValid:
         test_def['spec']['clusterIPs'] = ['192.168.1.1', '2001:0db8:85a3:0000:0000:8a2e:0370:7334']
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'cluster_ip' in fail_msg, fail_msg
         assert "not allowed with type='ExternalName'" in fail_msg, fail_msg
 
@@ -460,7 +460,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert "maximum of two entries" in fail_msg, fail_msg
 
     @staticmethod
@@ -473,7 +473,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert "must be set to 'RequireDualStack' or 'PreferDualStack'" in fail_msg, fail_msg
         assert "ip_families_policy" in fail_msg, fail_msg
 
@@ -487,7 +487,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'must be IPv4 and other IPv6' in fail_msg, fail_msg
 
     @staticmethod
@@ -500,7 +500,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'a valid IPv4 address' in fail_msg, fail_msg
         assert "['IPv4']" in fail_msg, fail_msg
 
@@ -514,7 +514,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'a valid IPv6 address' in fail_msg, fail_msg
         assert "['IPv6']" in fail_msg, fail_msg
 
@@ -528,7 +528,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'cluster_ips' in fail_msg, fail_msg
         assert 'valid IPv4 or IPv6 address' in fail_msg, fail_msg
         assert "['IPv4', 'IPv6']" in fail_msg, fail_msg
@@ -543,7 +543,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'cluster_ip' in fail_msg, fail_msg
         assert 'valid IPv4 or IPv6 address' in fail_msg, fail_msg
         assert "['IPv4', 'IPv6']" in fail_msg, fail_msg
@@ -557,7 +557,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'external_ips' in fail_msg, fail_msg
         assert 'valid IPv4 or IPv6 address' in fail_msg, fail_msg
 
@@ -570,7 +570,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert "only valid with type='LoadBalancer'" in fail_msg, fail_msg
 
     @staticmethod
@@ -583,7 +583,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert "load_balancer_ip" in fail_msg, fail_msg
         assert "valid IPv4 or IPv6 address" in fail_msg, fail_msg
 
@@ -597,7 +597,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert "load_balancer_source_ranges" in fail_msg, fail_msg
         assert "IP range" in fail_msg, fail_msg
 
@@ -611,7 +611,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert "external_name" in fail_msg, fail_msg
         assert "only valid with type='ExternalName'" in fail_msg, fail_msg
 
@@ -622,7 +622,7 @@ class TestValid:
         test_def['spec']['externalName'] = "_foo-bar"
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'external_name' in fail_msg, fail_msg
         assert "lowercase DNS-1123 subdomain" in fail_msg, fail_msg
 
@@ -636,7 +636,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert "health_check_node_port" in fail_msg, fail_msg
         assert "type='LoadBalancer'" in fail_msg, fail_msg
         assert "external_traffic_policy='Local'" in fail_msg, fail_msg
@@ -651,7 +651,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert "health_check_node_port" in fail_msg, fail_msg
         assert "valid port number" in fail_msg, fail_msg
 
@@ -665,7 +665,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert "session_affinity_timeout" in fail_msg, fail_msg
         assert "session_affinity='ClientIP'" in fail_msg, fail_msg
 
@@ -679,7 +679,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert "session_affinity_timeout" in fail_msg, fail_msg
         assert "0 < x <= 86400" in fail_msg, fail_msg
 

@@ -59,7 +59,7 @@ class TestValidate:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'lowercase' in fail_msg
         assert 'dns' in fail_msg
         assert '1123' in fail_msg
@@ -73,7 +73,7 @@ class TestValidate:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'keys' in fail_msg
         assert 'in' in fail_msg
         assert 'data' in fail_msg
@@ -86,7 +86,7 @@ class TestValidate:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'keys' in fail_msg
         assert 'in' in fail_msg
         assert 'string_data' in fail_msg
@@ -99,7 +99,7 @@ class TestValidate:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'map[string][]byte' in fail_msg
 
     @staticmethod
@@ -110,7 +110,7 @@ class TestValidate:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'map[string]string' in fail_msg
 
 

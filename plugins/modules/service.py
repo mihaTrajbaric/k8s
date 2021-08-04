@@ -602,7 +602,6 @@ def validate(module, k8s_definition):
         module.fail_json(msg=f'load_balancer_ip {Validators.ip_address_msg}')
     for i, ip_range in enumerate(spec.get('loadBalancerSourceRanges') or list()):
         if not Validators.ip_range(ip_range):
-            print(ip_range)
             module.fail_json(msg=f'load_balancer_source_ranges[{i}] {Validators.ip_range_msg}')
 
     external_name = spec.get('externalName')

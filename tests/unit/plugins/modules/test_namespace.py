@@ -48,7 +48,7 @@ class TestValidate:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'lowercase dns-1123 subdomain' in fail_msg
 
     @staticmethod
@@ -59,7 +59,7 @@ class TestValidate:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'map[string]string' in fail_msg
 
 

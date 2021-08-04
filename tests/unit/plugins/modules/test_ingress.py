@@ -201,7 +201,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'lowercase dns-1123 subdomain' in fail_msg, fail_msg
 
     @staticmethod
@@ -221,7 +221,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'one of (default_backend_service, rules)' in fail_msg, fail_msg
 
     @staticmethod
@@ -232,7 +232,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'default_backend_service.name' in fail_msg, fail_msg
         assert 'lowercase dns-1135 label name' in fail_msg, fail_msg
 
@@ -244,7 +244,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'default_backend_service.port' in fail_msg, fail_msg
         assert 'valid port number' in fail_msg, fail_msg
 
@@ -256,7 +256,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'default_backend_service.port' in fail_msg, fail_msg
         assert 'IANA_SVC_NAME' in fail_msg, fail_msg
 
@@ -268,7 +268,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'rules[0].host' in fail_msg, fail_msg
         assert 'a dns-1123 subdomain' in fail_msg, fail_msg
         assert 'wildcard dns-1123 subdomain' in fail_msg, fail_msg
@@ -281,7 +281,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'rules[0].paths' in fail_msg, fail_msg
         assert 'at least one parameter' in fail_msg, fail_msg
 
@@ -293,7 +293,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'backend_service.name' in fail_msg, fail_msg
         assert 'a lowercase dns-1135 label name' in fail_msg, fail_msg
 
@@ -305,7 +305,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'backend_service.port' in fail_msg, fail_msg
         assert 'valid port number' in fail_msg, fail_msg
 
@@ -317,7 +317,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'backend_service.port' in fail_msg, fail_msg
         assert 'IANA_SVC_NAME' in fail_msg, fail_msg
 
@@ -329,7 +329,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'rules[0].paths[0].path' in fail_msg, fail_msg
         assert 'url path' in fail_msg, fail_msg
         assert 'rfc 3986' in fail_msg, fail_msg
@@ -342,6 +342,6 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'tls[0].secret' in fail_msg, fail_msg
         assert 'a lowercase dns-1123 subdomain' in fail_msg, fail_msg

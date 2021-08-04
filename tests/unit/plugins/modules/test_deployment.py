@@ -471,7 +471,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'lowercase dns-1123 subdomain' in fail_msg, fail_msg
 
     @staticmethod
@@ -481,8 +481,8 @@ class TestValid:
         with patch.object(CommonValidation, 'metadata', return_value=None) as mock_metadata:
             validate(module, full_def)
             assert mock_metadata.call_count == 2, mock_metadata.call_count
-            assert mock_metadata.mock_calls == [call(module, full_def), call(module, full_def['spec']['template'])], \
-                   mock_metadata.mock_calls
+            assert mock_metadata.mock_calls == [call(module, full_def),
+                                                call(module, full_def['spec']['template'])], mock_metadata.mock_calls
 
     @staticmethod
     def test_validate_selector():
@@ -500,7 +500,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'at least one container' in fail_msg, fail_msg
 
     @staticmethod
@@ -511,7 +511,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'lowercase dns-1123 label name' in fail_msg, fail_msg
 
     @staticmethod
@@ -522,7 +522,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'image is missing' in fail_msg, fail_msg
 
     @staticmethod
@@ -533,7 +533,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'container_port' in fail_msg, fail_msg
         assert 'valid port number' in fail_msg, fail_msg
 
@@ -545,7 +545,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'host_port' in fail_msg, fail_msg
         assert 'valid port number' in fail_msg, fail_msg
 
@@ -557,7 +557,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'name' in fail_msg, fail_msg
         assert 'IANA_SVC_NAME' in fail_msg, fail_msg
 
@@ -570,7 +570,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'duplicate port name' in fail_msg, fail_msg
         assert 'unique name' in fail_msg, fail_msg
 
@@ -582,7 +582,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'name' in fail_msg, fail_msg
         assert 'C_IDENTIFIER' in fail_msg, fail_msg
 
@@ -604,7 +604,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'more then one value source' in fail_msg, fail_msg
         assert 'one of (value, config_map, secret)' in fail_msg, fail_msg
 
@@ -625,7 +625,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'config_map.name' in fail_msg, fail_msg
         assert 'lowercase dns-1123 subdomain' in fail_msg, fail_msg
 
@@ -646,7 +646,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'secret.name' in fail_msg, fail_msg
         assert 'lowercase dns-1123 subdomain' in fail_msg, fail_msg
 
@@ -665,7 +665,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'env_from' in fail_msg, fail_msg
         assert 'config_map.name' in fail_msg, fail_msg
         assert 'lowercase dns-1123 subdomain' in fail_msg, fail_msg
@@ -689,7 +689,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'more then one value source' in fail_msg, fail_msg
         assert 'only one of (config_map, secret)' in fail_msg, fail_msg
 
@@ -708,7 +708,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'env_from' in fail_msg, fail_msg
         assert 'secret.name' in fail_msg, fail_msg
         assert 'lowercase dns-1123 subdomain' in fail_msg, fail_msg
@@ -729,7 +729,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'env_from' in fail_msg, fail_msg
         assert 'prefix' in fail_msg, fail_msg
         assert 'C_IDENTIFIER' in fail_msg, fail_msg
@@ -742,7 +742,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'volume_mounts' in fail_msg, fail_msg
         assert 'name not found' in fail_msg, fail_msg
 
@@ -754,7 +754,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'volume_mounts' in fail_msg, fail_msg
         assert 'path' in fail_msg, fail_msg
         assert "should not contain ':'" in fail_msg, fail_msg
@@ -768,7 +768,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'sub_path and sub_path_expr' in fail_msg, fail_msg
         assert 'mutually exclusive' in fail_msg, fail_msg
 
@@ -780,7 +780,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'volume_devices' in fail_msg, fail_msg
         assert 'name not found' in fail_msg, fail_msg
 
@@ -793,7 +793,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'volume_devices' in fail_msg, fail_msg
         assert 'persistentVolumeClaim' in fail_msg, fail_msg
 
@@ -805,7 +805,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'volume_devices' in fail_msg, fail_msg
         assert 'path' in fail_msg, fail_msg
         assert "should not contain ':'" in fail_msg, fail_msg
@@ -818,7 +818,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'resource_limits.cpu' in fail_msg, fail_msg
         assert "Quantities" in fail_msg, fail_msg
 
@@ -830,7 +830,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'resource_limits.memory' in fail_msg, fail_msg
         assert "Quantities" in fail_msg, fail_msg
 
@@ -842,7 +842,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'resource_requests.cpu' in fail_msg, fail_msg
         assert "Quantities" in fail_msg, fail_msg
 
@@ -854,7 +854,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg']
+        fail_msg = module.fail_json.call_args[1]['msg']
         assert 'resource_requests.memory' in fail_msg, fail_msg
         assert "Quantities" in fail_msg, fail_msg
 
@@ -866,7 +866,7 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'volumes' in fail_msg, fail_msg
         assert 'name' in fail_msg, fail_msg
         assert "lowercase dns-1123 label name" in fail_msg, fail_msg
@@ -890,6 +890,6 @@ class TestValid:
 
         validate(module, test_def)
         module.fail_json.assert_called()
-        fail_msg = module.fail_json.call_args.kwargs['msg'].lower()
+        fail_msg = module.fail_json.call_args[1]['msg'].lower()
         assert 'more then one volume source' in fail_msg, fail_msg
         assert 'one of (pvc, config_map, secret)' in fail_msg, fail_msg
