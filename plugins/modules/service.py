@@ -246,7 +246,6 @@ options:
         - Can be used only with I(session_affinity=ClientIP).
         - The value must be 0 < x <= 86400 (1 day).
         type: int
-        default: 10800
 
 seealso:
 - name: K8s Service documentation
@@ -489,7 +488,7 @@ def validate(module, k8s_definition):
 
     if selector:
         if service_type == 'ExternalName':
-            module.fail_json(msg='selector is not allowed with type=ExternalName')
+            module.fail_json(msg="selector is not allowed with type='ExternalName'")
         if not Validators.string_string_dict(selector):
             module.fail_json(msg="selector should be map[string]string")
 
@@ -499,10 +498,12 @@ def validate(module, k8s_definition):
     # validate unique port names
     port_names = list()
 
-    if len(spec.get('ports') or list()) < 1:
+    ports = spec.get('ports') or list()
+
+    if len(ports) < 1:
         module.fail_json(msg="ports must have at least one element")
 
-    for i, port_obj in enumerate(spec.get('ports')):
+    for i, port_obj in enumerate(ports):
 
         if not Validators.port(port_obj.get('port')):
             module.fail_json(msg=f"ports[{i}].port {Validators.port_msg}")
@@ -521,7 +522,7 @@ def validate(module, k8s_definition):
             port_names.append(port_name)
         if not Validators.dns_label(port_name):
             module.fail_json(msg=f"ports[{i}].name {Validators.dns_label_msg}")
-        if len(spec.get('ports')) > 1 and port_name is None:
+        if len(ports) > 1 and port_name is None:
             module.fail_json(msg=f"ports[{i}].name is not set, but should be, since service has more then one port")
 
         if not Validators.port(port_obj.get('nodePort')):
@@ -530,14 +531,15 @@ def validate(module, k8s_definition):
     ip_families = spec.get('ipFamilies') or list()
     ip_families_policy = spec.get('ipFamilyPolicy')
 
+    if service_type == 'ExternalName' and (ip_families or ip_families_policy):
+        module.fail_json(msg="ip_families and ip_families_policy are not allowed with type='ExternalName'")
+
     if ip_families:
-        if service_type == 'ExternalName':
-            module.fail_json(msg='ip_families is not allowed with type=ExternalName')
         if len(ip_families) > 2:
             module.fail_json(msg='ip_families field may hold a maximum of two entries '
                                  '(dual-stack families, in either order)')
         if len(ip_families) == 2 and ip_families[0] == ip_families[1]:
-            module.fail_json(msg='The same IP Family cannot be specified more then once')
+            module.fail_json(msg='The same IP Family cannot be specified more than once')
 
         if len(ip_families) == 2 and ip_families_policy == 'SingleStack':
             module.fail_json(msg="ip_families_policy must be set to 'RequireDualStack' or 'PreferDualStack'"
@@ -550,7 +552,7 @@ def validate(module, k8s_definition):
     cluster_ip = spec.get('clusterIP')
     cluster_ips = spec.get('clusterIPs') or []
     if service_type == 'ExternalName' and (cluster_ip or cluster_ips):
-        module.fail_json(msg='cluster_ip and cluster_ips are not allowed with type=ExternalName')
+        module.fail_json(msg="cluster_ip and cluster_ips are not allowed with type='ExternalName'")
 
     if cluster_ips:
         if len(cluster_ips) > 2:
@@ -598,7 +600,7 @@ def validate(module, k8s_definition):
 
     if not Validators.ip_address(spec.get('loadBalancerIP')):
         module.fail_json(msg=f'load_balancer_ip {Validators.ip_address_msg}')
-    for i, ip_range in enumerate(spec.get('load_balancer_source_ranges') or list()):
+    for i, ip_range in enumerate(spec.get('loadBalancerSourceRanges') or list()):
         if not Validators.ip_range(ip_range):
             module.fail_json(msg=f'load_balancer_source_ranges[{i}] {Validators.ip_range_msg}')
 
@@ -618,14 +620,13 @@ def validate(module, k8s_definition):
         if not Validators.port(health_check_node_port):
             module.fail_json(msg=f'health_check_node_port {Validators.port_msg}')
 
-    session_affinity_timeout = spec.get('sessionAffinityConfig').get('clientIP').get('timeoutSeconds')
+    session_affinity_timeout = spec.get('sessionAffinityConfig', dict()).get('clientIP', dict()).get('timeoutSeconds')
 
-    # "user defined session_affinity_timeout" is almost the same as
-    # "session_affinity_timeout is not set to default value"
-    if session_affinity_timeout != 10800 and spec.get('sessionAffinity') != 'ClientIP':
-        module.fail_json("session_affinity_timeout can only be used with session_affinity='ClientIP'")
-    if not 0 < session_affinity_timeout <= 86400:
-        module.fail_json(msg='session_affinity_timeout must be 0 < x <= 86400')
+    if session_affinity_timeout:
+        if spec.get('sessionAffinity') != 'ClientIP':
+            module.fail_json(msg="session_affinity_timeout can only be used with session_affinity='ClientIP'")
+        if not 0 < session_affinity_timeout <= 86400:
+            module.fail_json(msg='session_affinity_timeout must be 0 < x <= 86400')
 
 
 def main():
@@ -654,7 +655,7 @@ def main():
         health_check_node_port=dict(type='int'),
         publish_not_ready_addresses=dict(type='bool', default=False),
         session_affinity=dict(type='str', choices=['ClientIP', 'None'], default='None'),
-        session_affinity_timeout=dict(type='int', default=10800)
+        session_affinity_timeout=dict(type='int')
 
     ))
     required_if = [
