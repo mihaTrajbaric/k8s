@@ -1026,15 +1026,16 @@ def validate(module, k8s_definition):
                              "if strategy.type==RollingUpdate")
 
     pod_definition = k8s_definition['spec']['template']
-    CommonValidation.selector(module, pod_definition)
+    CommonValidation.metadata(module, pod_definition)
 
     # to verify unique port names
     port_names = list()
+    containers = pod_definition['spec'].get('containers') or list()
 
-    if len(pod_definition['spec'].get('containers', list())) < 1:
+    if len(containers) < 1:
         module.fail_json(msg="There must be at least one container in a Pod.")
 
-    for i, container in enumerate(pod_definition['spec']['containers']):
+    for i, container in enumerate(containers):
         if not Validators.dns_label(container['name']):
             module.fail_json(msg=f"containers[{i}].name {Validators.dns_label_msg}")
 
@@ -1043,9 +1044,9 @@ def validate(module, k8s_definition):
 
         for j, port in enumerate(container.get('ports', list())):
             if not Validators.port(port.get('containerPort')):
-                module.fail_json(msg=f"containers[{i}].ports[{j}].containerPort {Validators.port_msg}")
+                module.fail_json(msg=f"containers[{i}].ports[{j}].container_port {Validators.port_msg}")
             if not Validators.port(port.get('hostPort')):
-                module.fail_json(msg=f"containers[{i}].ports[{j}].hostPort {Validators.port_msg}")
+                module.fail_json(msg=f"containers[{i}].ports[{j}].host_port {Validators.port_msg}")
             name = port.get('name')
             if not Validators.iana_svc_name(name):
                 module.fail_json(msg=f"containers[{i}].ports[{j}].name {Validators.iana_svc_name_msg}")
@@ -1112,7 +1113,7 @@ def validate(module, k8s_definition):
             if name not in volume_dict.keys():
                 module.fail_json(msg=f"containers[{i}].volume_devices[{j}].name not found. Every name should match the "
                                      f"Name of a Volume.")
-            if volume_dict[name] != 'persistentVolumeClaim':
+            elif volume_dict.get(name) != 'persistentVolumeClaim':
                 module.fail_json(msg=f"containers[{i}].volume_devices[{j}].name should match the name of a "
                                      f"persistentVolumeClaim (pvc) in the pod")
 
@@ -1135,7 +1136,7 @@ def validate(module, k8s_definition):
             'secret' in volume
         ]
         if sum(modes) != 1:
-            module.fail_json(msg=f"More then one VolumeSource in volumes[{i}]. "
+            module.fail_json(msg=f"More then one volume source in volumes[{i}]. "
                                  f"Only one of (pvc, config_map, secret) can be present.")
 
 
