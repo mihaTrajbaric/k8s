@@ -331,7 +331,7 @@ EXAMPLES = r'''
     load_balancer_ip: 77.230.145.14
     load_balancer_source_ranges:
       - 2001:db8:abcd:0012::0/64
-      - 77.103.1.1/24
+      - 77.103.0.0/16
     load_balancer_class: internal-vip
 
 - name: External name
@@ -602,6 +602,7 @@ def validate(module, k8s_definition):
         module.fail_json(msg=f'load_balancer_ip {Validators.ip_address_msg}')
     for i, ip_range in enumerate(spec.get('loadBalancerSourceRanges') or list()):
         if not Validators.ip_range(ip_range):
+            print(ip_range)
             module.fail_json(msg=f'load_balancer_source_ranges[{i}] {Validators.ip_range_msg}')
 
     external_name = spec.get('externalName')

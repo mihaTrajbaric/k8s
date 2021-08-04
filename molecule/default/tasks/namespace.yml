@@ -1,11 +1,5 @@
 ---
-- name: Converge
-  collections:
-    - sodalite.k8s
-  hosts: localhost
-  connection: local
-  gather_facts: no
-  tasks:
+- block:
     - name: Create new namespace
       sodalite.k8s.namespace:
         name: test-namespace

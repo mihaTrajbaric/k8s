@@ -1,11 +1,5 @@
 ---
-- name: Converge
-  collections:
-    - sodalite.k8s
-  hosts: localhost
-  connection: local
-  gather_facts: no
-  tasks:
+- block:
     - name: Minimal example with wait (can take 30s)
       sodalite.k8s.deployment:
         name: getting-started

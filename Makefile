@@ -25,10 +25,9 @@ test-sanity:
 #test-integration:
 #	ansible-test integration --docker -v --color --retry-on-error --python $(PYTHON_VERSION) --continue-on-error --diff --coverage $(?TEST_ARGS)
 
-.PHONY: integration
-integration:  ## Run integration tests
-	pip install -r integration.requirements # -r collection.requirements
-	pytest -s --molecule-base-config=base.yml tests/integration/molecule
+.PHONY: test-molecule
+test-molecule:
+	molecule test
 
 .PHONY: test-unit
 test-unit:

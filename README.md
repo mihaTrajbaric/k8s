@@ -1,5 +1,10 @@
-# collection_template
-You can build a new repository for an Ansible Collection using this template by following [Creating a repository from a template](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template). This README.md contains recommended headings for your collection README.md, with comments describing what each section should contain. Once you have created your collection repository, delete this paragraph and the title above it from your README.md.
+# SODALITE Kubernetes (k8s) collection
+<!-- Add CI and code coverage badges here. Samples included below. -->
+[![CI](https://github.com/ansible-collections/REPONAMEHERE/workflows/CI/badge.svg?event=push)](https://github.com/ansible-collections/REPONAMEHERE/actions) [![Codecov](https://img.shields.io/codecov/c/github/ansible-collections/REPONAMEHERE)](https://codecov.io/gh/ansible-collections/REPONAMEHERE)
+
+<!-- Describe the collection and why a user would want to use it. What does the collection do? -->
+
+## Tested with Ansible
 
 <!--start requires_ansible-->
 ## Ansible version compatibility
@@ -10,16 +15,6 @@ Plugins and modules within a collection may be tested with only specific Ansible
 A collection may contain metadata that identifies these versions.
 PEP440 is the schema used to describe the versions of Ansible.
 <!--end requires_ansible-->
-
-# SODALITE Kubernetes (k8s) collection
-<!-- Add CI and code coverage badges here. Samples included below. -->
-[![CI](https://github.com/ansible-collections/REPONAMEHERE/workflows/CI/badge.svg?event=push)](https://github.com/ansible-collections/REPONAMEHERE/actions) [![Codecov](https://img.shields.io/codecov/c/github/ansible-collections/REPONAMEHERE)](https://codecov.io/gh/ansible-collections/REPONAMEHERE)
-
-<!-- Describe the collection and why a user would want to use it. What does the collection do? -->
-
-## Tested with Ansible
-
-<!-- List the versions of Ansible the collection has been tested with. Must match what is in galaxy.yml. -->
 
 ## External requirements
 
@@ -34,14 +29,14 @@ PEP440 is the schema used to describe the versions of Ansible.
 ### Modules
 Name | Description
 --- | ---
-[sodalite.k8s.config_map](https://github.com/mihaTrajbaric/k8s/blob/master/docs/sodalite.k8s.config_map_module.rst)|Creates k8s ConfigMap
-[sodalite.k8s.deployment](https://github.com/mihaTrajbaric/k8s/blob/master/docs/sodalite.k8s.deployment_module.rst)|Creates k8s Deployment
-[sodalite.k8s.ingress](https://github.com/mihaTrajbaric/k8s/blob/master/docs/sodalite.k8s.ingress_module.rst)|Creates k8s Ingress
-[sodalite.k8s.namespace](https://github.com/mihaTrajbaric/k8s/blob/master/docs/sodalite.k8s.namespace_module.rst)|Creates k8s Namespace
-[sodalite.k8s.pvc](https://github.com/mihaTrajbaric/k8s/blob/master/docs/sodalite.k8s.pvc_module.rst)|Creates k8s PersistentVolumeClaim
-[sodalite.k8s.secret](https://github.com/mihaTrajbaric/k8s/blob/master/docs/sodalite.k8s.secret_module.rst)|Creates k8s Secret
-[sodalite.k8s.service](https://github.com/mihaTrajbaric/k8s/blob/master/docs/sodalite.k8s.service_module.rst)|Creates k8s Service
-[sodalite.k8s.storage_class](https://github.com/mihaTrajbaric/k8s/blob/master/docs/sodalite.k8s.storage_class_module.rst)|Creates k8s StorageClass
+[sodalite.k8s.config_map](https://github.com/mihaTrajbaric/k8s/blob/main/docs/sodalite.k8s.config_map_module.rst)|Creates k8s ConfigMap
+[sodalite.k8s.deployment](https://github.com/mihaTrajbaric/k8s/blob/main/docs/sodalite.k8s.deployment_module.rst)|Creates k8s Deployment
+[sodalite.k8s.ingress](https://github.com/mihaTrajbaric/k8s/blob/main/docs/sodalite.k8s.ingress_module.rst)|Creates k8s Ingress
+[sodalite.k8s.namespace](https://github.com/mihaTrajbaric/k8s/blob/main/docs/sodalite.k8s.namespace_module.rst)|Creates k8s Namespace
+[sodalite.k8s.pvc](https://github.com/mihaTrajbaric/k8s/blob/main/docs/sodalite.k8s.pvc_module.rst)|Creates k8s PersistentVolumeClaim
+[sodalite.k8s.secret](https://github.com/mihaTrajbaric/k8s/blob/main/docs/sodalite.k8s.secret_module.rst)|Creates k8s Secret
+[sodalite.k8s.service](https://github.com/mihaTrajbaric/k8s/blob/main/docs/sodalite.k8s.service_module.rst)|Creates k8s Service
+[sodalite.k8s.storage_class](https://github.com/mihaTrajbaric/k8s/blob/main/docs/sodalite.k8s.storage_class_module.rst)|Creates k8s StorageClass
 
 <!--end collection content-->
 

@@ -302,7 +302,7 @@ class Validators:
         if ip_range is None:
             return True
         try:
-            ipaddress.ip_network(ip_range)
+            ipaddress.ip_network(ip_range, strict=False)    # will not block mask with host bits set
             return True
         except ValueError:
             return False

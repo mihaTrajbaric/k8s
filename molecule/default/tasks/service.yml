@@ -1,11 +1,5 @@
 ---
-- name: Converge
-  collections:
-    - sodalite.k8s
-  hosts: localhost
-  connection: local
-  gather_facts: no
-  tasks:
+- block:
     - name: Minimal example with wait (can take 30s)
       sodalite.k8s.service:
         name: service-minimal
@@ -158,7 +152,7 @@
           - name: my-port
             port: 8080
         load_balancer_ip: '10.10.10.1'
-        load_balancer_source_ranges: '10.96.1.1/22'
+        load_balancer_source_ranges: ['10.96.0.0/16']
         # cannot test on minikube
         # load_balancer_class: a-b
       register: result
@@ -176,7 +170,7 @@
           - result.result.spec.ports[0].port == 8080
           - result.result.spec.loadBalancerIP == '10.10.10.1'
           - "{{ result.result.spec.loadBalancerSourceRanges | length == 1 }}"
-          - result.result.spec.loadBalancerSourceRanges[0] == '10.96.1.1/22'
+          - result.result.spec.loadBalancerSourceRanges[0] == '10.96.0.0/16'
 
     - name: Ensure example is really on the kubernetes cluster
       kubernetes.core.k8s_info:
