@@ -1,27 +1,32 @@
-# SODALITE Kubernetes (k8s) collection
+# SODALITE k8s collection
 <!-- Add CI and code coverage badges here. Samples included below. -->
-[![CI](https://github.com/ansible-collections/REPONAMEHERE/workflows/CI/badge.svg?event=push)](https://github.com/ansible-collections/REPONAMEHERE/actions) [![Codecov](https://img.shields.io/codecov/c/github/ansible-collections/REPONAMEHERE)](https://codecov.io/gh/ansible-collections/REPONAMEHERE)
+[![CI](https://github.com/mihaTrajbaric/k8s/actions/workflows/ansible-test.yml/badge.svg?event=push)](https://github.com/mihaTrajbaric/k8s/actions/workflows/ansible-test.yml) [![codecov](https://codecov.io/gh/mihaTrajbaric/k8s/branch/main/graph/badge.svg?token=MHBEH17281)](https://codecov.io/gh/mihaTrajbaric/k8s)
 
 <!-- Describe the collection and why a user would want to use it. What does the collection do? -->
 
-## Tested with Ansible
+This repository hosts the `sodalite.k8s` Ansible Collection.
+
+The collection includes quality Ansible content to help automate the management of applications in Kubernetes
 
 <!--start requires_ansible-->
 ## Ansible version compatibility
 
-This collection has been tested against following Ansible versions: **>=2.9.10**.
+This collection has been tested against following Ansible versions: **>=2.9.17**.
 
 Plugins and modules within a collection may be tested with only specific Ansible versions.
 A collection may contain metadata that identifies these versions.
 PEP440 is the schema used to describe the versions of Ansible.
 <!--end requires_ansible-->
 
+## Python Support
+
+* Collection supports 3.6+
+
+Note: Python2 is deprecated from [1st January 2020](https://www.python.org/doc/sunset-python-2/). Please switch to Python3.
+
 ## External requirements
 
-<!-- List any external resources the collection depends on, for example minimum versions of an OS, libraries, or utilities. Do not list other Ansible collections here. -->
-
-### Supported connections
-<!-- Optional. If your collection supports only specific connection types (such as HTTPAPI, netconf, or others), list them here. -->
+Collection requires python package [kubernetes>=12.0.0](https://pypi.org/project/kubernetes/).
 
 ## Included content
 
@@ -40,38 +45,117 @@ Name | Description
 
 <!--end collection content-->
 
-<!-- Galaxy will eventually list the module docs within the UI, but until that is ready, you may need to either describe your plugins etc here, or point to an external docsite to cover that information. -->
+## Installation and Usage
 
-## Using this collection
+### Installing the Collection from GIT repository
 
-<!--Include some quick examples that cover the most common use cases for your collection content. -->
+Before using the Sodalite.8s collection, you need to install it with the Ansible Galaxy CLI:
+
+    ansible-galaxy collection install git+https://github.com/mihaTrajbaric/k8s.git
+
+You can also include it in a `requirements.yml` file and install it via `ansible-galaxy collection install -r requirements.yml`, using the format:
+
+```yaml
+---
+collections:
+  - name: https://github.com/mihaTrajbaric/k8s.git
+    type: git
+```
+
+
+### Installing the Collection from Ansible Galaxy (TODO - no published yet)
+
+Before using the Sodalite.8s collection, you need to install it with the Ansible Galaxy CLI:
+
+    ansible-galaxy collection install sodalite.k8s
+
+You can also include it in a `requirements.yml` file and install it via `ansible-galaxy collection install -r requirements.yml`, using the format:
+
+```yaml
+---
+collections:
+  - name: sodalite.k8s
+    version: 1.0.0
+```
+
+### Installing the Kubernetes Python Library
+
+Content in this collection requires the [Kubernetes Python client](https://pypi.org/project/kubernetes/) to interact with Kubernetes' APIs. You can install it with:
+
+    pip3 install kubernetes>=12.0.0
+
+### Using modules from the Kubernetes Collection in your playbooks
+
+It's preferable to use content in this collection using their Fully Qualified Collection Namespace (FQCN), for example `sodalite.k8s.deployment`:
+
+```yaml
+---
+- hosts: localhost
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: Ensure namespace exists.
+      sodalite.k8s.namespace:
+        name: test-namespace
+        state: present
+
+    - name: Create new configmap
+      sodalite.k8s.config_map:
+        name: myapp-config
+        namespace: test-namespace
+        data:
+          DB_IP: another-service
+
+    - name: Ensure the myapp Deployment exists
+      sodalite.k8s.deployment:
+        name: myapp-deployment
+        namespace: test-namespace
+        state: present
+        labels:
+          app: myapp
+        selector:
+          match_labels:
+            app: myapp
+        containers:
+          - name: myapp-container
+            image: myapp:latest
+            ports:
+              - host_port: 80
+                container_port: 80
+                protocol: TCP
+            env_from:
+              - config_map:
+                  name: myapp-config
+
+    - name: Ensure the myapp Service exists
+      sodalite.k8s.service:
+        name: myapp-service
+        namespace: test-namespace
+        state: present
+        type: LoadBalancer
+        selector:
+          app: myapp
+        ports:
+          - name: my-port
+            port: 8080
+            target_port: 8080
+```
 
 See [Ansible Using collections](https://docs.ansible.com/ansible/latest/user_guide/collections_using.html) for more details.
 
-## Contributing to this collection
+## Contributing to this collection (TODO)
 
 <!--Describe how the community can contribute to your collection. At a minimum, include how and where users can create issues to report problems or request features for this collection.  List contribution requirements, including preferred workflows and necessary testing, so you can benefit from community PRs. If you are following general Ansible contributor guidelines, you can link to - [Ansible Community Guide](https://docs.ansible.com/ansible/latest/community/index.html). -->
 
 
 ## Release notes
 
-See the [changelog](https://github.com/ansible-collections/REPONAMEHERE/tree/main/CHANGELOG.rst).
+See the [changelog](https://github.com/mihaTrajbaric/k8s/tree/main/CHANGELOG.rst).
 
-## Roadmap
+<!-- ## Roadmap -->
 
 <!-- Optional. Include the roadmap for this collection, and the proposed release/versioning strategy so users can anticipate the upgrade/update cycle. -->
-
-## More information
-
-<!-- List out where the user can find additional information, such as working group meeting times, slack/IRC channels, or documentation for the product this collection automates. At a minimum, link to: -->
-
-- [Ansible Collection overview](https://github.com/ansible-collections/overview)
-- [Ansible User guide](https://docs.ansible.com/ansible/latest/user_guide/index.html)
-- [Ansible Developer guide](https://docs.ansible.com/ansible/latest/dev_guide/index.html)
-- [Ansible Collections Checklist](https://github.com/ansible-collections/overview/blob/master/collection_requirements.rst)
-- [Ansible Community code of conduct](https://docs.ansible.com/ansible/latest/community/code_of_conduct.html)
-- [The Bullhorn (the Ansible Contributor newsletter)](https://us19.campaign-archive.com/home/?u=56d874e027110e35dea0e03c1&id=d6635f5420)
-- [Changes impacting Contributors](https://github.com/ansible-collections/overview/issues/45)
 
 ## Licensing
 

@@ -1,1 +1,29 @@
-releases: {}
+ancestor: null
+releases:
+  1.0.0:
+    modules:
+    - description: Creates k8s ConfigMap
+      name: config_map
+      namespace: ''
+    - description: Creates k8s Deployment
+      name: deployment
+      namespace: ''
+    - description: Creates k8s Ingress
+      name: ingress
+      namespace: ''
+    - description: Creates k8s Namespace
+      name: namespace
+      namespace: ''
+    - description: Creates k8s PersistentVolumeClaim
+      name: pvc
+      namespace: ''
+    - description: Creates k8s Secret
+      name: secret
+      namespace: ''
+    - description: Creates k8s Service
+      name: service
+      namespace: ''
+    - description: Creates k8s StorageClass
+      name: storage_class
+      namespace: ''
+    release_date: '2021-08-04'

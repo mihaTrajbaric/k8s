@@ -242,7 +242,7 @@ Parameters
                 <td>
                 </td>
                 <td>
-                        <div>Selects a key of a Deployment.</div>
+                        <div>Selects a key of a ConfigMap.</div>
                 </td>
             </tr>
                                 <tr>
@@ -302,7 +302,7 @@ Parameters
                         </ul>
                 </td>
                 <td>
-                        <div>Specify whether the Deployment or its key must be defined.</div>
+                        <div>Specify whether the ConfigMap or its key must be defined.</div>
                 </td>
             </tr>
 
@@ -461,8 +461,8 @@ Parameters
                 <td>
                 </td>
                 <td>
-                        <div>The Deployment to select from.</div>
-                        <div>The contents of the target Deployment&#x27;s Data field will represent the key-value pairs as environment variables.</div>
+                        <div>The ConfigMap to select from.</div>
+                        <div>The contents of the target ConfigMap&#x27;s Data field will represent the key-value pairs as environment variables.</div>
                 </td>
             </tr>
                                 <tr>
@@ -504,7 +504,7 @@ Parameters
                         </ul>
                 </td>
                 <td>
-                        <div>Specify whether the Deployment must be defined.</div>
+                        <div>Specify whether the ConfigMap must be defined.</div>
                 </td>
             </tr>
 
@@ -522,7 +522,7 @@ Parameters
                 <td>
                 </td>
                 <td>
-                        <div>An optional identifier to prepend to each key in the Deployment.</div>
+                        <div>An optional identifier to prepend to each key in the ConfigMap.</div>
                         <div>Must be a C_IDENTIFIER.</div>
                 </td>
             </tr>
@@ -1880,9 +1880,9 @@ Parameters
                 <td>
                 </td>
                 <td>
-                        <div>Adapts a Deployment into a volume.</div>
-                        <div>The contents of the target Deployment&#x27;s Data field will be presented in a volume as files using the keys in the <code>Data</code> field as the file names, unless the items element is populated with specific mappings of keys to paths.</div>
-                        <div>Deployment volumes support ownership management and SELinux relabeling.</div>
+                        <div>Adapts a ConfigMap into a volume.</div>
+                        <div>The contents of the target ConfigMap&#x27;s Data field will be presented in a volume as files using the keys in the <code>Data</code> field as the file names, unless the items element is populated with specific mappings of keys to paths.</div>
+                        <div>ConfigMap volumes support ownership management and SELinux relabeling.</div>
                 </td>
             </tr>
                                 <tr>
@@ -1921,9 +1921,9 @@ Parameters
                 <td>
                 </td>
                 <td>
-                        <div>If unspecified, each key-value pair in the Data field of the referenced Deployment will be projected into the volume as a file whose name is the key and content is the value.</div>
+                        <div>If unspecified, each key-value pair in the Data field of the referenced ConfigMap will be projected into the volume as a file whose name is the key and content is the value.</div>
                         <div>If specified, the listed keys will be projected into the specified paths, and unlisted keys will not be present.</div>
-                        <div>If a key is specified which is not present in the Deployment, the volume setup will error unless it is marked optional.</div>
+                        <div>If a key is specified which is not present in the ConfigMap, the volume setup will error unless it is marked optional.</div>
                         <div>Paths must be relative and may not contain the &#x27;..&#x27; path or start with &#x27;..&#x27;.</div>
                 </td>
             </tr>
@@ -2026,7 +2026,7 @@ Parameters
                         </ul>
                 </td>
                 <td>
-                        <div>Specify whether the Deployment or its keys must be defined.</div>
+                        <div>Specify whether the ConfigMap or its keys must be defined.</div>
                 </td>
             </tr>
 

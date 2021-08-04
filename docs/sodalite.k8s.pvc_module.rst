@@ -53,6 +53,11 @@ Parameters
                     </div>
                 </td>
                 <td>
+                        <ul style="margin: 0; padding: 0"><b>Choices:</b>
+                                    <li>ReadWriteOnce</li>
+                                    <li>ReadOnlyMany</li>
+                                    <li>ReadWriteMany</li>
+                        </ul>
                 </td>
                 <td>
                         <div>Contains the desired access modes the volume should have.</div>

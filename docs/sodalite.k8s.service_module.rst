@@ -956,7 +956,6 @@ Parameters
                     </div>
                 </td>
                 <td>
-                        <b>Default:</b><br/><div style="color: blue">10800</div>
                 </td>
                 <td>
                         <div>The maximum session sticky time in seconds.</div>
@@ -1277,7 +1276,7 @@ Examples
         load_balancer_ip: 77.230.145.14
         load_balancer_source_ranges:
           - 2001:db8:abcd:0012::0/64
-          - 77.103.1.1/24
+          - 77.103.0.0/16
         load_balancer_class: internal-vip
 
     - name: External name
