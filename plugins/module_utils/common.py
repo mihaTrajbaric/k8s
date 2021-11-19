@@ -205,7 +205,7 @@ class Validators:
         """
         if _dict is None:
             return True
-        return all([isinstance(value, str) and isinstance(key, str) for key, value in _dict.items()])
+        return all(isinstance(value, str) and isinstance(key, str) for key, value in _dict.items())
 
     @staticmethod
     def string_byte_dict(_dict):
@@ -214,7 +214,7 @@ class Validators:
         """
         if _dict is None:
             return True
-        return all([isinstance(value, str) and Validators.base64(value) for key, value in _dict.items()])
+        return all((isinstance(value, str) and Validators.base64(value) for key, value in _dict.items()))
 
     @staticmethod
     def base64(message):
@@ -232,8 +232,8 @@ class Validators:
         """
         if _dict is None:
             return True
-        return all([isinstance(key, str) and isinstance(value, str) and Validators.quantity(value)
-                    for key, value in _dict.items()])
+        return all((isinstance(key, str) and isinstance(value, str) and Validators.quantity(value)
+                    for key, value in _dict.items()))
 
     port_msg = "should be a valid port number, 0 < x < 65536"
 
