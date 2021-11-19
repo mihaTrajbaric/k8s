@@ -1,5 +1,4 @@
 # SODALITE k8s collection
-<!-- Add CI and code coverage badges here. Samples included below. -->
 [![CI](https://github.com/mihaTrajbaric/k8s/actions/workflows/ansible-test.yml/badge.svg?event=push)](https://github.com/mihaTrajbaric/k8s/actions/workflows/ansible-test.yml) [![codecov](https://codecov.io/gh/mihaTrajbaric/k8s/branch/main/graph/badge.svg?token=MHBEH17281)](https://codecov.io/gh/mihaTrajbaric/k8s)
 
 <!-- Describe the collection and why a user would want to use it. What does the collection do? -->
@@ -49,7 +48,7 @@ Name | Description
 
 ### Installing the Collection from GIT repository
 
-Before using the Sodalite.8s collection, you need to install it with the Ansible Galaxy CLI:
+Before using the Sodalite.k8s collection, you need to install it with the Ansible Galaxy CLI:
 
     ansible-galaxy collection install git+https://github.com/mihaTrajbaric/k8s.git
 
